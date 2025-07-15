@@ -1,10 +1,10 @@
 # Go Derby
 
-🏇 A terminal-based horse racing life simulation game inspired by Umamusume: Pretty Derby, built with Go and Bubble Tea. Features a beautiful purple/pink UI theme with green selections and 28 uniquely named horses.
+🏇 A terminal-based horse racing life simulation game inspired by Umamusume: Pretty Derby, built with Go and Bubble Tea.
 
 ## Features
 
-- **Horse Scouting**: Choose from 28 uniquely named horses with mystical names like "Moonlit Mirage", "Starfall Symphony", and "Phoenix Awakening"
+- **Horse Scouting**: Choose from 28 uniquely named horses.
 - **Training System**: Weekly training calendar with 4 training types (Stamina, Speed, Technique, Mental)
 - **Racing**: Live race simulation with real-time progress bars and commentary
 - **Season Progression**: 24-week seasons with aging and long-term progression
