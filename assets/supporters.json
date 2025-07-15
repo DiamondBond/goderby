@@ -1,0 +1,50 @@
+[
+  {
+    "id": "sup_001",
+    "name": "Speed Coach",
+    "rarity": 0,
+    "description": "Improves speed training effectiveness",
+    "training_bonus": {
+      "1": 5
+    },
+    "special_effect": "",
+    "is_owned": true
+  },
+  {
+    "id": "sup_002",
+    "name": "Stamina Trainer",
+    "rarity": 1,
+    "description": "Boosts stamina and technique training",
+    "training_bonus": {
+      "0": 7,
+      "2": 3
+    },
+    "special_effect": "",
+    "is_owned": true
+  },
+  {
+    "id": "sup_003",
+    "name": "Mental Coach",
+    "rarity": 2,
+    "description": "Expert in mental training and morale",
+    "training_bonus": {
+      "3": 10
+    },
+    "special_effect": "",
+    "is_owned": false
+  },
+  {
+    "id": "sup_004",
+    "name": "Elite Trainer",
+    "rarity": 3,
+    "description": "Master trainer with balanced bonuses",
+    "training_bonus": {
+      "0": 5,
+      "1": 5,
+      "2": 5,
+      "3": 5
+    },
+    "special_effect": "",
+    "is_owned": false
+  }
+]
