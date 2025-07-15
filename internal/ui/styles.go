@@ -6,21 +6,21 @@ import (
 )
 
 var (
-	// Uma Musume inspired color palette - bright, fun and bubbly!
-	primaryColor   = lipgloss.Color("#7ED321") // Bright lime green like Uma Musume buttons
+	// Uma Musume inspired color palette - inverted to purple/pink theme with green selections!
+	primaryColor   = lipgloss.Color("#DDA0DD") // Light plum for passive UI elements
 	secondaryColor = lipgloss.Color("#FFB6C1") // Soft pink for backgrounds
-	accentColor    = lipgloss.Color("#FF69B4") // Hot pink for highlights
+	accentColor    = lipgloss.Color("#7ED321") // Bright lime green for selected items/highlights
 	successColor   = lipgloss.Color("#7ED321") // Bright green for success
 	warningColor   = lipgloss.Color("#FFD700") // Golden yellow for warnings
 	errorColor     = lipgloss.Color("#FF6B9D") // Bright pink for errors
 	textColor      = lipgloss.Color("#FFFFFF") // White text
-	subtleColor    = lipgloss.Color("#DDA0DD") // Light plum for subtle elements
+	subtleColor    = lipgloss.Color("#B19CD9") // Medium purple for subtle elements
 
 	// Additional Uma Musume colors
 	brightBlue = lipgloss.Color("#00BFFF") // Bright sky blue
 	lavender   = lipgloss.Color("#E6E6FA") // Light lavender
 	peach      = lipgloss.Color("#FFCCCB") // Light peach
-	mint       = lipgloss.Color("#98FB98") // Light mint green
+	mint       = lipgloss.Color("#DDA0DD") // Light plum for passive borders
 
 	// Base styles
 	titleStyle = lipgloss.NewStyle().
@@ -41,7 +41,7 @@ var (
 
 	selectedMenuItemStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#FFFFFF")).
-				Background(primaryColor).
+				Background(accentColor).
 				Bold(true).
 				Padding(0, 2)
 
@@ -92,7 +92,6 @@ var (
 			Foreground(lipgloss.Color("#FFFFFF")).
 			Background(primaryColor).
 			Padding(0, 2).
-			Margin(0, 1).
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(primaryColor)
 
@@ -100,7 +99,6 @@ var (
 				Foreground(lipgloss.Color("#888888")).
 				Background(subtleColor).
 				Padding(0, 2).
-				Margin(0, 1).
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(lipgloss.Color("#888888"))
 )

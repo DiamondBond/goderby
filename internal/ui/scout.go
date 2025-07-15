@@ -127,7 +127,7 @@ func (m ScoutModel) View() string {
 
 		if m.gameState.PlayerHorse == nil {
 			b.WriteString(RenderButton("Select This Horse (Enter)", true))
-			b.WriteString(" ")
+			b.WriteString("  ")
 		}
 		b.WriteString(RenderButton("Back (ESC)", true))
 		b.WriteString("\n\n")

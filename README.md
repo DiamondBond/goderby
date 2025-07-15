@@ -1,16 +1,16 @@
 # Go Derby
 
-🏇 A terminal-based horse racing life simulation game inspired by Umamusume: Pretty Derby, built with Go and Bubble Tea.
+🏇 A terminal-based horse racing life simulation game inspired by Umamusume: Pretty Derby, built with Go and Bubble Tea. Features a beautiful purple/pink UI theme with green selections and 28 uniquely named horses.
 
 ## Features
 
-- **Horse Scouting**: Choose from 12 unique horses with different stats and breeds
+- **Horse Scouting**: Choose from 28 uniquely named horses with mystical names like "Moonlit Mirage", "Starfall Symphony", and "Phoenix Awakening"
 - **Training System**: Weekly training calendar with 4 training types (Stamina, Speed, Technique, Mental)
 - **Racing**: Live race simulation with real-time progress bars and commentary
 - **Season Progression**: 24-week seasons with aging and long-term progression
 - **Supporter System**: Support cards that provide training bonuses
 - **Save/Load**: Persistent game state with JSON saves
-- **Beautiful TUI**: Colorful terminal interface with Unicode icons and progress bars
+- **Beautiful TUI**: Elegant purple/pink themed terminal interface with green selections, Unicode icons and animated progress bars
 
 ## Installation
 
@@ -59,11 +59,12 @@ go build -o goderby cmd/main.go
 
 ## Technical Details
 
-- Built with Go 1.21+
+- Built with Go 1.24.5+
 - Uses Bubble Tea for TUI framework
-- Lip Gloss for styling and colors
+- Lip Gloss for styling and colors (custom purple/pink theme)
 - JSON for data storage and saves
 - Modular architecture with separate models, UI, and game logic
+- Clean MVC pattern with message-based communication
 
 ## File Structure
 
