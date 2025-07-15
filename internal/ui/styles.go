@@ -6,15 +6,21 @@ import (
 )
 
 var (
-	// Color palette
-	primaryColor   = lipgloss.Color("#FF6B6B")
-	secondaryColor = lipgloss.Color("#A8E6CF")
-	accentColor    = lipgloss.Color("#45B7D1")
-	successColor   = lipgloss.Color("#96CEB4")
-	warningColor   = lipgloss.Color("#FFEAA7")
-	errorColor     = lipgloss.Color("#FD79A8")
-	textColor      = lipgloss.Color("#FFFFFF")
-	subtleColor    = lipgloss.Color("#A0A0A0")
+	// Uma Musume inspired color palette - bright, fun and bubbly!
+	primaryColor   = lipgloss.Color("#7ED321") // Bright lime green like Uma Musume buttons
+	secondaryColor = lipgloss.Color("#FFB6C1") // Soft pink for backgrounds
+	accentColor    = lipgloss.Color("#FF69B4") // Hot pink for highlights
+	successColor   = lipgloss.Color("#7ED321") // Bright green for success
+	warningColor   = lipgloss.Color("#FFD700") // Golden yellow for warnings
+	errorColor     = lipgloss.Color("#FF6B9D") // Bright pink for errors
+	textColor      = lipgloss.Color("#FFFFFF") // White text
+	subtleColor    = lipgloss.Color("#DDA0DD") // Light plum for subtle elements
+
+	// Additional Uma Musume colors
+	brightBlue = lipgloss.Color("#00BFFF") // Bright sky blue
+	lavender   = lipgloss.Color("#E6E6FA") // Light lavender
+	peach      = lipgloss.Color("#FFCCCB") // Light peach
+	mint       = lipgloss.Color("#98FB98") // Light mint green
 
 	// Base styles
 	titleStyle = lipgloss.NewStyle().
@@ -35,13 +41,13 @@ var (
 
 	selectedMenuItemStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#FFFFFF")).
-				Background(accentColor).
+				Background(primaryColor).
 				Bold(true).
 				Padding(0, 2)
 
 	cardStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(subtleColor).
+			BorderForeground(mint).
 			Padding(1, 2).
 			Margin(0, 1).
 			Foreground(lipgloss.Color("#FFFFFF"))
@@ -51,19 +57,19 @@ var (
 				BorderForeground(accentColor).
 				Padding(1, 2).
 				Margin(0, 1).
-				Background(lipgloss.Color("#2D3436")).
+				Background(accentColor).
 				Foreground(lipgloss.Color("#FFFFFF"))
 
 	statBarStyle = lipgloss.NewStyle().
 			Foreground(successColor).
-			Background(lipgloss.Color("#DDD"))
+			Background(lavender)
 
 	fatigueBarStyle = lipgloss.NewStyle().
 			Foreground(errorColor).
-			Background(lipgloss.Color("#DDD"))
+			Background(lavender)
 
 	infoStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#CCCCCC")).
+			Foreground(brightBlue).
 			Italic(true)
 
 	successStyle = lipgloss.NewStyle().
@@ -79,20 +85,20 @@ var (
 			Bold(true)
 
 	helpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#CCCCCC")).
+			Foreground(subtleColor).
 			Padding(1, 0)
 
 	buttonStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FFFFFF")).
-			Background(accentColor).
+			Background(primaryColor).
 			Padding(0, 2).
 			Margin(0, 1).
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(accentColor)
+			BorderForeground(primaryColor)
 
 	disabledButtonStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#888888")).
-				Background(lipgloss.Color("#444444")).
+				Background(subtleColor).
 				Padding(0, 2).
 				Margin(0, 1).
 				Border(lipgloss.RoundedBorder()).
