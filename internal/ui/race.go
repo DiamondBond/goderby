@@ -368,15 +368,23 @@ func (m RaceModel) renderRaceView() string {
 
 			for _, pos := range positions {
 				marker := "  "
-				if pos.HorseID == m.gameState.PlayerHorse.ID {
+				isPlayerHorse := pos.HorseID == m.gameState.PlayerHorse.ID
+				if isPlayerHorse {
 					marker = "→ "
 				}
 
 				// Create progress bar for each horse
 				progressBar := RenderProgressBar(pos.Distance, race.Distance, 30, statBarStyle)
 
-				b.WriteString(fmt.Sprintf("%s%d. %s %s\n",
-					marker, pos.Position, pos.Name, progressBar))
+				horseLine := fmt.Sprintf("%s%d. %s %s",
+					marker, pos.Position, pos.Name, progressBar)
+
+				// Highlight player's horse line
+				if isPlayerHorse {
+					horseLine = lipgloss.NewStyle().Foreground(accentColor).Bold(true).Render(horseLine)
+				}
+
+				b.WriteString(horseLine + "\n")
 			}
 		}
 
@@ -433,12 +441,20 @@ func (m RaceModel) renderResultView() string {
 		}
 
 		marker := "  "
-		if entrant.HorseID == m.gameState.PlayerHorse.ID {
+		isPlayerHorse := entrant.HorseID == m.gameState.PlayerHorse.ID
+		if isPlayerHorse {
 			marker = "→ "
 		}
 
-		b.WriteString(fmt.Sprintf("%s%d. %s (%s)\n",
-			marker, entrant.Position, entrant.HorseName, entrant.Time))
+		resultLine := fmt.Sprintf("%s%d. %s (%s)",
+			marker, entrant.Position, entrant.HorseName, entrant.Time)
+
+		// Highlight player's horse line
+		if isPlayerHorse {
+			resultLine = lipgloss.NewStyle().Foreground(accentColor).Bold(true).Render(resultLine)
+		}
+
+		b.WriteString(resultLine + "\n")
 	}
 
 	b.WriteString("\n\n")

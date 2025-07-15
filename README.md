@@ -16,7 +16,16 @@
 
 ```bash
 cd goderby
+# Build using Go directly
 go build -o goderby cmd/main.go
+
+# Or use the build script (Linux/macOS)
+./build.sh
+
+# Or for Windows
+./build_windows.sh
+
+# Run the game
 ./goderby
 ```
 
