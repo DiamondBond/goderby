@@ -11,6 +11,8 @@ import (
 	"goderby/internal/ui"
 )
 
+const GameVersion = "v1.0"
+
 type AppModel struct {
 	currentView ui.ViewState
 	gameState   *models.GameState
@@ -34,7 +36,7 @@ type AppModel struct {
 }
 
 func NewAppModel() *AppModel {
-	dataLoader := data.NewDataLoader("./assets")
+	dataLoader := data.NewDataLoader("")
 	gameState := models.NewGameState()
 
 	return &AppModel{
@@ -115,11 +117,11 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *AppModel) View() string {
 	if !m.initialized {
-		return ui.RenderTitle("Loading Go Derby...") + "\n\n" + ui.RenderInfo("Loading game data...")
+		return ui.RenderTitle("Loading Go Derby "+GameVersion+"...") + "\n\n" + ui.RenderInfo("Loading game data...")
 	}
 
 	if m.quitting {
-		return ui.RenderTitle("Thanks for playing Go Derby!") + "\n\n" + ui.RenderInfo("Game saved successfully. See you next time!")
+		return ui.RenderTitle("Thanks for playing Go Derby "+GameVersion+"!") + "\n\n" + ui.RenderInfo("Game saved successfully. See you next time!")
 	}
 
 	switch m.currentView {
@@ -240,11 +242,6 @@ func (m *AppModel) handleQuit() (*AppModel, tea.Cmd) {
 type InitDataMsg struct{}
 
 func main() {
-	// Create assets directory if it doesn't exist
-	if err := os.MkdirAll("./assets", 0755); err != nil {
-		log.Fatal("Failed to create assets directory:", err)
-	}
-
 	app := NewAppModel()
 	p := tea.NewProgram(app, tea.WithAltScreen())
 

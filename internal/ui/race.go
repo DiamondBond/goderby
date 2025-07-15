@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -509,8 +510,18 @@ func (m RaceModel) completeRace() (RaceModel, tea.Cmd) {
 }
 
 func (m RaceModel) generateAIHorse(race models.Race) *models.Horse {
-	names := []string{"Thunder", "Lightning", "Storm", "Wind", "Fire", "Star", "Moon", "Sun"}
-	name := names[len(race.Entrants)%len(names)] + " AI"
+	// Pool of fantasy horse names
+	prefixes := []string{"Velvet", "Midnight", "Golden", "Silver", "Crimson", "Sapphire", "Obsidian", "Ethereal", "Aurora", "Phoenix", "Thunder", "Lightning", "Storm", "Mystic", "Nebula", "Starfall", "Copper", "Ivory", "Prism", "Jade", "Opal", "Wildfire", "Cobalt", "Sunset", "Raven", "Glacier", "Twilight", "Amethyst"}
+	suffixes := []string{"Thunder", "Mirage", "Legacy", "Grace", "Spirit", "Dreamer", "Zephyr", "Majesty", "Shadow", "Awakening", "Voyager", "Whisper", "Embrace", "Promise", "Flame", "Cascade", "Horizon", "Tempest", "Reverie", "Symphony", "Canyon", "Eclipse", "Strike", "Wind", "Runner", "Star", "Express", "Wave", "Dancer", "Bolt", "Flash", "Dust", "Dream"}
+
+	// Generate a random name by combining prefix + suffix
+	prefix := prefixes[rand.Intn(len(prefixes))]
+	suffix := suffixes[rand.Intn(len(suffixes))]
+	name := prefix + " " + suffix
+
+	// Random horse breeds
+	breeds := []string{"Thoroughbred", "Arabian", "Quarter Horse", "Mustang", "Friesian", "Clydesdale", "Appaloosa", "Paint Horse"}
+	breed := breeds[rand.Intn(len(breeds))]
 
 	// Generate stats based on race requirements
 	baseRating := race.MinRating + (race.MinRating / 4)
@@ -518,7 +529,7 @@ func (m RaceModel) generateAIHorse(race models.Race) *models.Horse {
 	aiHorse := &models.Horse{
 		ID:        fmt.Sprintf("ai_%d", len(race.Entrants)),
 		Name:      name,
-		Breed:     "AI",
+		Breed:     breed,
 		Age:       3,
 		Stamina:   baseRating + (-10 + (len(race.Entrants) * 5)),
 		Speed:     baseRating + (-10 + (len(race.Entrants) * 5)),
