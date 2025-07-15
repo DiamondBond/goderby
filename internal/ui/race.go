@@ -35,11 +35,11 @@ const (
 )
 
 func NewRaceModel(gameState *models.GameState, races []models.Race) RaceModel {
-	// Filter races player can enter
+	// Filter races player can enter with progression requirements
 	availableRaces := make([]models.Race, 0)
 	if gameState.PlayerHorse != nil {
 		for _, race := range races {
-			if race.CanEnter(gameState.PlayerHorse) {
+			if race.CanEnterWithGameState(gameState.PlayerHorse, gameState) {
 				availableRaces = append(availableRaces, race)
 			}
 		}
@@ -502,6 +502,14 @@ func (m RaceModel) completeRace() (RaceModel, tea.Cmd) {
 
 	if m.result.PlayerRank == 1 {
 		m.gameState.GameStats.TotalWins++
+	}
+
+	// Record race completion for progression tracking
+	if m.gameState.Season.CompletedRaces == nil {
+		m.gameState.Season.CompletedRaces = make([]string, 0)
+	}
+	if len(m.races) > m.selectedRace {
+		m.gameState.Season.CompletedRaces = append(m.gameState.Season.CompletedRaces, m.races[m.selectedRace].ID)
 	}
 
 	return m, func() tea.Msg {

@@ -145,6 +145,58 @@ func (r *Race) CanEnter(horse *Horse) bool {
 	return true
 }
 
+// CanEnterWithGameState checks if the horse can enter the race considering game progression
+func (r *Race) CanEnterWithGameState(horse *Horse, gameState *GameState) bool {
+	// Basic eligibility check
+	if !r.CanEnter(horse) {
+		return false
+	}
+
+	// Additional progression checks
+	return r.MeetsProgressionRequirements(gameState)
+}
+
+// MeetsProgressionRequirements checks if player has met requirements to access this race
+func (r *Race) MeetsProgressionRequirements(gameState *GameState) bool {
+	// For higher tier races, require progression
+	switch r.Grade {
+	case Grade2:
+		// Need to have completed at least one Grade3 race
+		return r.hasCompletedRaceOfGrade(gameState, Grade3)
+	case Grade1:
+		// Need to have completed at least one Grade2 race and won a Grade3
+		return r.hasCompletedRaceOfGrade(gameState, Grade2) && r.hasWonRaceOfGrade(gameState, Grade3)
+	case GradeG1:
+		// Need to have won at least one Grade1 race
+		return r.hasWonRaceOfGrade(gameState, Grade1)
+	default:
+		// Maiden and Grade3 are always accessible if rating requirements are met
+		return true
+	}
+}
+
+func (r *Race) hasCompletedRaceOfGrade(gameState *GameState, targetGrade RaceGrade) bool {
+	if gameState.Season.CompletedRaces == nil {
+		return false
+	}
+
+	// Check against available races in game state
+	for _, completedRaceID := range gameState.Season.CompletedRaces {
+		for _, race := range gameState.AvailableRaces {
+			if race.ID == completedRaceID && race.Grade == targetGrade {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (r *Race) hasWonRaceOfGrade(gameState *GameState, targetGrade RaceGrade) bool {
+	// For now, assume completion means winning for simplicity
+	// Could be enhanced to track actual win records
+	return r.hasCompletedRaceOfGrade(gameState, targetGrade)
+}
+
 func (r *Race) AddEntrant(horseID string) bool {
 	if len(r.Entrants) >= r.MaxEntrants {
 		return false

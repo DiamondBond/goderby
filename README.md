@@ -15,7 +15,6 @@
 ## Installation
 
 ```bash
-git clone <repository>
 cd goderby
 go build -o goderby cmd/main.go
 ./goderby
