@@ -19,11 +19,12 @@ type AppModel struct {
 	dataLoader  *data.DataLoader
 
 	// View models
-	mainMenu ui.MainMenuModel
-	scout    ui.ScoutModel
-	train    ui.TrainModel
-	race     ui.RaceModel
-	summary  ui.SummaryModel
+	mainMenu   ui.MainMenuModel
+	scout      ui.ScoutModel
+	train      ui.TrainModel
+	race       ui.RaceModel
+	supporters ui.SupportersModel
+	summary    ui.SummaryModel
 
 	// Data
 	availableHorses []models.Horse
@@ -106,6 +107,10 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var model tea.Model
 		model, cmd = m.race.Update(msg)
 		m.race = model.(ui.RaceModel)
+	case ui.SupportersView:
+		var model tea.Model
+		model, cmd = m.supporters.Update(msg)
+		m.supporters = model.(ui.SupportersModel)
 	case ui.SummaryView:
 		var model tea.Model
 		model, cmd = m.summary.Update(msg)
@@ -133,6 +138,8 @@ func (m *AppModel) View() string {
 		return m.train.View()
 	case ui.RaceView:
 		return m.race.View()
+	case ui.SupportersView:
+		return m.supporters.View()
 	case ui.SummaryView:
 		return m.summary.View()
 	default:
@@ -201,6 +208,8 @@ func (m *AppModel) handleNavigation(msg ui.NavigationMsg) (*AppModel, tea.Cmd) {
 		m.train = ui.NewTrainModel(m.gameState)
 	case ui.RaceView:
 		m.race = ui.NewRaceModel(m.gameState, m.availableRaces)
+	case ui.SupportersView:
+		m.supporters = ui.NewSupportersModel(m.gameState)
 	case ui.SummaryView:
 		m.summary = ui.NewSummaryModel(m.gameState)
 	}
@@ -219,6 +228,9 @@ func (m *AppModel) handleMenuSelection(msg ui.MenuSelectionMsg) (*AppModel, tea.
 	case "Race":
 		m.currentView = ui.RaceView
 		m.race = ui.NewRaceModel(m.gameState, m.availableRaces)
+	case "Supporters":
+		m.currentView = ui.SupportersView
+		m.supporters = ui.NewSupportersModel(m.gameState)
 	case "Season Summary":
 		m.currentView = ui.SummaryView
 		m.summary = ui.NewSummaryModel(m.gameState)

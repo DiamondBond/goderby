@@ -330,6 +330,21 @@ func (m SummaryModel) advanceSeason() (SummaryModel, tea.Cmd) {
 	// Age the horse
 	m.gameState.PlayerHorse.Age++
 
+	// Preserve completed races history before creating new season
+	for _, raceID := range m.gameState.Season.CompletedRaces {
+		// Add to global completion tracker if not already present
+		found := false
+		for _, completedID := range m.gameState.AllCompletedRaces {
+			if completedID == raceID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			m.gameState.AllCompletedRaces = append(m.gameState.AllCompletedRaces, raceID)
+		}
+	}
+
 	// Create new season
 	newSeason := models.NewSeason(m.gameState.Season.Number + 1)
 	m.gameState.Season = newSeason

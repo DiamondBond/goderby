@@ -1,6 +1,9 @@
 package models
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"math"
 	"time"
 )
 
@@ -62,7 +65,9 @@ func (h *Horse) Train(trainingType TrainingType, supporters []Supporter) Trainin
 
 	bonus := calculateSupporterBonus(supporters, trainingType)
 	baseGain := 10 + bonus
-	actualGain := int(float64(baseGain) * (float64(h.Morale) / 100.0))
+	// Use proper rounding instead of truncation for morale calculation
+	moraleMultiplier := float64(h.Morale) / 100.0
+	actualGain := int(math.Round(float64(baseGain) * moraleMultiplier))
 
 	switch trainingType {
 	case StaminaTraining:
@@ -102,7 +107,51 @@ func (h *Horse) Rest() {
 }
 
 func (h *Horse) GetOverallRating() int {
-	return (h.Stamina + h.Speed + h.Technique + h.Mental) / 4
+	baseRating := (h.Stamina + h.Speed + h.Technique + h.Mental) / 4
+	return h.GetAgeAdjustedRating(baseRating)
+}
+
+// GetAgeAdjustedRating applies age-based performance modifiers
+func (h *Horse) GetAgeAdjustedRating(baseRating int) int {
+	ageFactor := h.GetAgePerformanceFactor()
+	adjustedRating := int(float64(baseRating) * ageFactor)
+	
+	// Ensure rating doesn't go below 10% of base
+	minRating := baseRating / 10
+	if adjustedRating < minRating {
+		adjustedRating = minRating
+	}
+	
+	return adjustedRating
+}
+
+// GetAgePerformanceFactor returns age-based performance multiplier
+func (h *Horse) GetAgePerformanceFactor() float64 {
+	switch h.Age {
+	case 2:
+		return 0.85 // Young horse, not fully developed
+	case 3:
+		return 0.95 // Developing
+	case 4:
+		return 1.00 // Prime starts
+	case 5:
+		return 1.02 // Peak performance
+	case 6:
+		return 1.00 // Still prime
+	case 7:
+		return 0.98 // Slight decline begins
+	case 8:
+		return 0.94 // Noticeable decline
+	case 9:
+		return 0.88 // Clear aging effects
+	case 10:
+		return 0.80 // Major decline before retirement
+	default:
+		if h.Age > 10 {
+			return 0.70 // Severe decline for older horses
+		}
+		return 1.00 // Fallback for unusual ages
+	}
 }
 
 type Stats struct {
@@ -145,7 +194,13 @@ type TrainingResult struct {
 }
 
 func generateID() string {
-	return time.Now().Format("20060102150405")
+	// Generate a UUID-like random ID to prevent collisions
+	bytes := make([]byte, 8)
+	if _, err := rand.Read(bytes); err != nil {
+		// Fallback to timestamp with nanosecond precision if crypto/rand fails
+		return time.Now().Format("20060102150405.000000000")
+	}
+	return hex.EncodeToString(bytes)
 }
 
 func min(a, b int) int {

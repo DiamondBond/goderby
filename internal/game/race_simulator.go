@@ -181,6 +181,9 @@ func (rs *RaceSimulator) calculateHorseSpeed(horse *models.Horse, turn, totalTur
 	// Fatigue penalty
 	fatiguePenalty := horse.Fatigue / 10
 
+	// Age affects race performance
+	ageFactor := horse.GetAgePerformanceFactor()
+
 	// Stamina affects endurance throughout race
 	raceProgress := float64(turn) / float64(totalTurns)
 	staminaFactor := 1.0
@@ -189,7 +192,7 @@ func (rs *RaceSimulator) calculateHorseSpeed(horse *models.Horse, turn, totalTur
 	}
 
 	speed := baseSpeed + techniqueBonus + mentalBonus - fatiguePenalty
-	speed = int(float64(speed) * staminaFactor)
+	speed = int(float64(speed) * staminaFactor * ageFactor)
 
 	if speed < 1 {
 		speed = 1

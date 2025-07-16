@@ -3,13 +3,14 @@ package models
 import "time"
 
 type GameState struct {
-	PlayerHorse     *Horse      `json:"player_horse"`
-	Supporters      []Supporter `json:"supporters"`
-	AvailableHorses []Horse     `json:"available_horses"`
-	AvailableRaces  []Race      `json:"available_races"`
-	Season          Season      `json:"season"`
-	GameStats       GameStats   `json:"game_stats"`
-	SavedAt         time.Time   `json:"saved_at"`
+	PlayerHorse        *Horse      `json:"player_horse"`
+	Supporters         []Supporter `json:"supporters"`
+	AvailableHorses    []Horse     `json:"available_horses"`
+	AvailableRaces     []Race      `json:"available_races"`
+	Season             Season      `json:"season"`
+	GameStats          GameStats   `json:"game_stats"`
+	AllCompletedRaces  []string    `json:"all_completed_races"` // Track all races ever completed across seasons
+	SavedAt            time.Time   `json:"saved_at"`
 }
 
 type Season struct {
@@ -99,12 +100,13 @@ type EventChoice struct {
 
 func NewGameState() *GameState {
 	return &GameState{
-		PlayerHorse:     nil,
-		Supporters:      make([]Supporter, 0),
-		AvailableHorses: make([]Horse, 0),
-		AvailableRaces:  make([]Race, 0),
-		Season:          NewSeason(1),
-		GameStats:       GameStats{},
-		SavedAt:         time.Now(),
+		PlayerHorse:       nil,
+		Supporters:        make([]Supporter, 0),
+		AvailableHorses:   make([]Horse, 0),
+		AvailableRaces:    make([]Race, 0),
+		Season:            NewSeason(1),
+		GameStats:         GameStats{},
+		AllCompletedRaces: make([]string, 0),
+		SavedAt:           time.Now(),
 	}
 }
