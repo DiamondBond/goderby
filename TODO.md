@@ -20,3 +20,6 @@ how is horse retirement implement from @PRD.md
 
 fix bug where when the horse has the smoke emoji next to it the right side
 alignment of | is off
+
+please investigate save and quit, it doesnt save all info like races available
+and etc, please analyze state and make sure everything is saved.
