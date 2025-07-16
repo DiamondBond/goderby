@@ -387,119 +387,6 @@ func (m SummaryModel) getSeasonAchievements(season models.Season) string {
 	return achievements.String()
 }
 
-func (m *SummaryModel) getRaceHistory(season models.Season) string {
-	var history strings.Builder
-
-	if len(season.CompletedRaces) == 0 {
-		history.WriteString("No races completed this season yet.\n")
-		history.WriteString("Visit the Race menu to enter your first race!")
-		return history.String()
-	}
-
-	history.WriteString(fmt.Sprintf("🏁 Season %d Race History (%d races):\n\n", season.Number, len(season.CompletedRaces)))
-
-	// Group races by unique race ID to avoid duplicates in display
-	uniqueRaces := make(map[string]int) // raceID -> count
-	for _, raceID := range season.CompletedRaces {
-		uniqueRaces[raceID]++
-	}
-
-	raceCount := 1
-	for raceID, count := range uniqueRaces {
-		// Find race details from available races
-		var raceDetails *models.Race
-		isFallback := false
-		for _, race := range m.gameState.AvailableRaces {
-			if race.ID == raceID {
-				raceDetails = &race
-				break
-			}
-		}
-
-		if raceDetails == nil {
-			// Create a fallback race entry with estimated details
-			raceDetails = m.createFallbackRace(raceID, count)
-			isFallback = true
-		}
-
-		// Display race information
-		gradeIcon := m.getGradeIcon(raceDetails.Grade)
-		nameDisplay := raceDetails.Name
-		if isFallback {
-			nameDisplay += " (Estimated)"
-		}
-		history.WriteString(fmt.Sprintf("%d. %s %s (%s)\n", raceCount, gradeIcon, nameDisplay, raceDetails.Grade.String()))
-		history.WriteString(fmt.Sprintf("   📏 Distance: %dm | 💰 Prize Pool: $%d\n", raceDetails.Distance, raceDetails.Prize))
-
-		// Show race date if available
-		if !raceDetails.Date.IsZero() {
-			history.WriteString(fmt.Sprintf("   📅 Date: %s\n", raceDetails.Date.Format("Jan 2, 2006")))
-		}
-
-		if count > 1 {
-			history.WriteString(fmt.Sprintf("   🔄 Entered %d times this season\n", count))
-		}
-
-		// Estimate performance based on current horse stats and race requirements
-		performance := m.estimateRacePerformance(raceDetails)
-		performanceIcon := m.getPerformanceIcon(performance)
-		history.WriteString(fmt.Sprintf("   %s Performance: %s\n", performanceIcon, performance))
-
-		// Add earnings estimate
-		earnings := m.estimateEarnings(raceDetails, count)
-		if earnings > 0 {
-			history.WriteString(fmt.Sprintf("   💵 Est. Earnings: $%d\n", earnings))
-		}
-
-		// Add difficulty indicator
-		difficulty := m.getRaceDifficulty(raceDetails)
-		history.WriteString(fmt.Sprintf("   🎯 Difficulty: %s\n", difficulty))
-
-		history.WriteString("\n")
-		raceCount++
-	}
-
-	// Add season race statistics summary
-	horse := m.gameState.PlayerHorse
-	winRate := 0.0
-	if horse.Races > 0 {
-		winRate = float64(horse.Wins) / float64(horse.Races) * 100
-	}
-
-	history.WriteString("📊 Season Racing Summary:\n")
-	history.WriteString(fmt.Sprintf("• Total Race Entries: %d\n", len(season.CompletedRaces)))
-	history.WriteString(fmt.Sprintf("• Unique Races Competed: %d\n", len(uniqueRaces)))
-	history.WriteString(fmt.Sprintf("• Career Record: %d wins in %d races (%.1f%%)\n", horse.Wins, horse.Races, winRate))
-	history.WriteString(fmt.Sprintf("• Total Career Earnings: $%d\n", horse.Money))
-	history.WriteString(fmt.Sprintf("• Fan Support Gained: %d fans\n", horse.FanSupport))
-
-	// Calculate grade distribution
-	gradeStats := make(map[models.RaceGrade]int)
-	for raceID := range uniqueRaces {
-		for _, race := range m.gameState.AvailableRaces {
-			if race.ID == raceID {
-				gradeStats[race.Grade]++
-				break
-			}
-		}
-	}
-
-	if len(gradeStats) > 0 {
-		history.WriteString("• Grade Distribution: ")
-		first := true
-		for grade, count := range gradeStats {
-			if !first {
-				history.WriteString(", ")
-			}
-			history.WriteString(fmt.Sprintf("%s×%d", grade.String(), count))
-			first = false
-		}
-		history.WriteString("\n")
-	}
-
-	return history.String()
-}
-
 func (m *SummaryModel) estimateRacePerformance(race *models.Race) string {
 	horse := m.gameState.PlayerHorse
 	horseRating := horse.GetOverallRating()
@@ -1185,6 +1072,14 @@ func (m *SummaryModel) getRaceHistoryScrollable(season models.Season) string {
 	if m.raceHistoryCursor < len(season.CompletedRaces) {
 		raceID := season.CompletedRaces[m.raceHistoryCursor]
 
+		// Check if we have a stored result for this race
+		var raceResult *models.CompletedRaceResult
+		if season.RaceResults != nil {
+			if result, ok := season.RaceResults[raceID]; ok {
+				raceResult = &result
+			}
+		}
+
 		// Find race details
 		var raceDetails *models.Race
 		isFallback := false
@@ -1216,15 +1111,37 @@ func (m *SummaryModel) getRaceHistoryScrollable(season models.Season) string {
 			history.WriteString(fmt.Sprintf("   📅 Date: %s\n", raceDetails.Date.Format("Jan 2, 2006")))
 		}
 
-		// Estimate performance based on current horse stats and race requirements
-		performance := m.estimateRacePerformance(raceDetails)
-		performanceIcon := m.getPerformanceIcon(performance)
-		history.WriteString(fmt.Sprintf("   %s Performance: %s\n", performanceIcon, performance))
+		// Show actual race result if available
+		if raceResult != nil {
+			// Show position
+			positionIcon := "🏁"
+			if raceResult.Position == 1 {
+				positionIcon = "🥇"
+			} else if raceResult.Position == 2 {
+				positionIcon = "🥈"
+			} else if raceResult.Position == 3 {
+				positionIcon = "🥉"
+			}
+			history.WriteString(fmt.Sprintf("   %s Finished: %d of %d\n", positionIcon, raceResult.Position, raceResult.TotalEntrants))
 
-		// Add earnings estimate (for single race entry)
-		earnings := m.estimateEarnings(raceDetails, 1)
-		if earnings > 0 {
-			history.WriteString(fmt.Sprintf("   💵 Est. Earnings: $%d\n", earnings))
+			// Show actual earnings and fans gained
+			if raceResult.PrizeMoney > 0 {
+				history.WriteString(fmt.Sprintf("   💵 Earnings: $%d\n", raceResult.PrizeMoney))
+			}
+			if raceResult.FansGained > 0 {
+				history.WriteString(fmt.Sprintf("   👥 Fans Gained: %d\n", raceResult.FansGained))
+			}
+		} else {
+			// Show estimated performance if no result stored
+			performance := m.estimateRacePerformance(raceDetails)
+			performanceIcon := m.getPerformanceIcon(performance)
+			history.WriteString(fmt.Sprintf("   %s Performance: %s\n", performanceIcon, performance))
+
+			// Add earnings estimate (for single race entry)
+			earnings := m.estimateEarnings(raceDetails, 1)
+			if earnings > 0 {
+				history.WriteString(fmt.Sprintf("   💵 Est. Earnings: $%d\n", earnings))
+			}
 		}
 
 		// Add difficulty indicator

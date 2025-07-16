@@ -30,6 +30,9 @@ type RaceModel struct {
 	obedienceCounter int  // Counter for disobedience effect
 	isDisobedient    bool // Whether horse is currently disobedient
 	lastWhipTurn     int  // Last turn whip was used
+	// Scrolling support
+	viewStart  int // For scrolling through races
+	maxVisible int // Maximum races visible at once
 }
 
 type RaceMode int
@@ -68,6 +71,8 @@ func NewRaceModel(gameState *models.GameState, races []models.Race) RaceModel {
 		obedienceCounter: 0,
 		isDisobedient:    false,
 		lastWhipTurn:     0,
+		viewStart:        0,
+		maxVisible:       5, // Show 5 races at a time
 	}
 }
 
@@ -108,6 +113,10 @@ func (m RaceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case SelectingRace:
 				if m.selectedRace > 0 {
 					m.selectedRace--
+					// Adjust view if cursor goes above visible area
+					if m.selectedRace < m.viewStart {
+						m.viewStart = m.selectedRace
+					}
 				}
 			case SettingStrategy:
 				// Cycle through formation
@@ -118,6 +127,8 @@ func (m RaceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedStrat.Formation = models.Lead
 				case models.Mount:
 					m.selectedStrat.Formation = models.Draft
+				default:
+					// No action for unknown formation
 				}
 			case ViewingResult, ConfirmingEntry, Racing:
 				// No action for these modes
@@ -127,6 +138,10 @@ func (m RaceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case SelectingRace:
 				if m.selectedRace < len(m.races)-1 {
 					m.selectedRace++
+					// Adjust view if cursor goes below visible area
+					if m.selectedRace >= m.viewStart+m.maxVisible {
+						m.viewStart = m.selectedRace - m.maxVisible + 1
+					}
 				}
 			case SettingStrategy:
 				// Cycle through formation
@@ -137,6 +152,8 @@ func (m RaceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedStrat.Formation = models.Mount
 				case models.Mount:
 					m.selectedStrat.Formation = models.Lead
+				default:
+					// No action for unknown formation
 				}
 			case ViewingResult, ConfirmingEntry, Racing:
 				// No action for these modes
@@ -151,6 +168,8 @@ func (m RaceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedStrat.Pace = models.Fast
 				case models.Conserve:
 					m.selectedStrat.Pace = models.Even
+				default:
+					// No action for unknown pace
 				}
 			} else if m.mode == Racing {
 				// Move left during race
@@ -168,6 +187,8 @@ func (m RaceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedStrat.Pace = models.Conserve
 				case models.Conserve:
 					m.selectedStrat.Pace = models.Fast
+				default:
+					// No action for unknown pace
 				}
 			} else if m.mode == Racing {
 				// Move right during race
@@ -285,7 +306,15 @@ func (m RaceModel) renderRaceListView() string {
 	b.WriteString(RenderHeader(fmt.Sprintf("%s (Rating: %d)", horse.Name, horse.GetOverallRating())))
 	b.WriteString("\n\n")
 
-	for i, race := range m.races {
+	// Calculate visible range
+	viewEnd := m.viewStart + m.maxVisible
+	if viewEnd > len(m.races) {
+		viewEnd = len(m.races)
+	}
+
+	// Display only visible races
+	for i := m.viewStart; i < viewEnd; i++ {
+		race := m.races[i]
 		cursor := " "
 		if m.selectedRace == i {
 			cursor = ">"
@@ -301,10 +330,26 @@ func (m RaceModel) renderRaceListView() string {
 		} else {
 			b.WriteString(RenderCard(raceInfo, false))
 		}
-		b.WriteString("\n")
+		if i < viewEnd-1 {
+			b.WriteString("\n")
+		}
 	}
 
-	b.WriteString("\n")
+	// Show scroll indicators
+	if len(m.races) > m.maxVisible {
+		b.WriteString("\n\n")
+		scrollInfo := fmt.Sprintf("Showing %d-%d of %d races",
+			m.viewStart+1, viewEnd, len(m.races))
+		if m.viewStart > 0 {
+			scrollInfo += " ↑"
+		}
+		if viewEnd < len(m.races) {
+			scrollInfo += " ↓"
+		}
+		b.WriteString(RenderInfo(scrollInfo))
+	}
+
+	b.WriteString("\n\n")
 	b.WriteString(RenderHelp("Enter to select race, ↑/↓ to navigate, ESC/q to go back"))
 
 	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
@@ -412,8 +457,8 @@ func (m RaceModel) renderRaceView() string {
 			b.WriteString("\n")
 
 			// Current standings
-			b.WriteString("🏆 Current Standings:\n")
-			b.WriteString(m.renderRaceStandings(progress))
+			// b.WriteString("🏆 Current Standings:\n")
+			// b.WriteString(m.renderRaceStandings(progress))
 		}
 
 		b.WriteString("\n")
@@ -582,89 +627,6 @@ func (m RaceModel) renderAnimatedRaceTrack(progress models.RaceProgressUpdate, r
 	return b.String()
 }
 
-func (m RaceModel) renderRaceStandings(progress models.RaceProgressUpdate) string {
-	var b strings.Builder
-
-	// Create a slice of horse positions for sorting by position
-	type HorsePosition struct {
-		HorseID  string
-		Position int
-		Name     string
-		Distance int
-	}
-
-	var positions []HorsePosition
-	for horseID, position := range progress.Positions {
-		name := horseID
-		// Try to find horse name from results
-		for _, entrant := range m.result.Results {
-			if entrant.HorseID == horseID {
-				name = entrant.HorseName
-				break
-			}
-		}
-		// If not found in results, try to get from game state
-		if name == horseID && horseID == m.gameState.PlayerHorse.ID {
-			name = m.gameState.PlayerHorse.Name
-		}
-
-		positions = append(positions, HorsePosition{
-			HorseID:  horseID,
-			Position: position,
-			Name:     name,
-			Distance: progress.Distances[horseID],
-		})
-	}
-
-	// Sort by position
-	for i := 0; i < len(positions)-1; i++ {
-		for j := i + 1; j < len(positions); j++ {
-			if positions[i].Position > positions[j].Position {
-				positions[i], positions[j] = positions[j], positions[i]
-			}
-		}
-	}
-
-	// Show top 5 positions
-	for i, pos := range positions {
-		if i >= 5 {
-			break
-		}
-
-		isPlayerHorse := pos.HorseID == m.gameState.PlayerHorse.ID
-
-		// Position medal/icon
-		var posIcon string
-		switch pos.Position {
-		case 1:
-			posIcon = "🥇"
-		case 2:
-			posIcon = "🥈"
-		case 3:
-			posIcon = "🥉"
-		default:
-			posIcon = fmt.Sprintf("%d.", pos.Position)
-		}
-
-		// Horse name
-		horseName := pos.Name
-		if len(horseName) > 30 {
-			horseName = horseName[:27] + "..."
-		}
-
-		standingLine := fmt.Sprintf("  %s %s", posIcon, horseName)
-
-		// Highlight player horse
-		if isPlayerHorse {
-			standingLine = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700")).Bold(true).Render(standingLine + " ⭐")
-		}
-
-		b.WriteString(standingLine + "\n")
-	}
-
-	return b.String()
-}
-
 func (m RaceModel) renderResultView() string {
 	var b strings.Builder
 
@@ -818,6 +780,24 @@ func (m RaceModel) completeRace() (RaceModel, tea.Cmd) {
 		raceID := m.races[m.selectedRace].ID
 		// Add to current season
 		m.gameState.Season.CompletedRaces = append(m.gameState.Season.CompletedRaces, raceID)
+
+		// Initialize RaceResults map if nil
+		if m.gameState.Season.RaceResults == nil {
+			m.gameState.Season.RaceResults = make(map[string]models.CompletedRaceResult)
+		}
+
+		// Store the race result with position
+		m.gameState.Season.RaceResults[raceID] = models.CompletedRaceResult{
+			RaceID:        raceID,
+			RaceName:      m.races[m.selectedRace].Name,
+			Grade:         m.races[m.selectedRace].Grade,
+			Distance:      m.races[m.selectedRace].Distance,
+			Date:          m.races[m.selectedRace].Date,
+			PrizeMoney:    m.result.PrizeMoney,
+			FansGained:    m.result.FansGained,
+			Position:      m.result.PlayerRank,
+			TotalEntrants: len(m.result.Results),
+		}
 
 		// Add to global completion tracker if not already present
 		found := false

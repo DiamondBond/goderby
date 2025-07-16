@@ -116,6 +116,10 @@ func (m TrainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return WeekCompleteMsg{}
 				}
 			}
+		case "d", "D":
+			if m.mode == SelectingDay && m.gameState.PlayerHorse.AreAllStatsMaxed() {
+				return m.performDoping()
+			}
 		}
 	}
 
@@ -158,8 +162,8 @@ func (m TrainModel) renderCalendarView(horse *models.Horse) string {
 	b.WriteString(RenderHeader(fmt.Sprintf("%s - Week %d", horse.Name, m.gameState.Season.CurrentWeek)))
 	b.WriteString("\n")
 
-	statusInfo := fmt.Sprintf("Overall Rating: %d | Fatigue: %d/100 | Morale: %d/100",
-		horse.GetOverallRating(), horse.Fatigue, horse.Morale)
+	statusInfo := fmt.Sprintf("Overall Rating: %d | Fatigue: %d/100 | Morale: %d/100 | Money: $%d",
+		horse.GetOverallRating(), horse.Fatigue, horse.Morale, horse.Money)
 	b.WriteString(cardStyle.Render(statusInfo))
 	b.WriteString("\n\n")
 
@@ -200,9 +204,17 @@ func (m TrainModel) renderCalendarView(horse *models.Horse) string {
 		b.WriteString("\n")
 		b.WriteString(RenderHelp("Press 'n' to advance to next week, ESC/q to go back"))
 	} else if m.canTrainToday() {
-		b.WriteString(RenderHelp("Enter to train, 'r' to rest, ↑/↓ to navigate, ESC/q to go back"))
+		helpText := "Enter to train, 'r' to rest, ↑/↓ to navigate, ESC/q to go back"
+		if horse.AreAllStatsMaxed() {
+			helpText = "Enter to train, 'r' to rest, 'D' to dope ($5000), ↑/↓ to navigate, ESC/q to go back"
+		}
+		b.WriteString(RenderHelp(helpText))
 	} else {
-		b.WriteString(RenderHelp("↑/↓ to navigate, ESC/q to go back"))
+		helpText := "↑/↓ to navigate, ESC/q to go back"
+		if horse.AreAllStatsMaxed() {
+			helpText = "'D' to dope ($5000), ↑/↓ to navigate, ESC/q to go back"
+		}
+		b.WriteString(RenderHelp(helpText))
 	}
 
 	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
@@ -425,6 +437,31 @@ func (m TrainModel) getStatValues(horse *models.Horse, trainingType models.Train
 	default:
 		return 0, 0
 	}
+}
+
+func (m TrainModel) performDoping() (TrainModel, tea.Cmd) {
+	horse := m.gameState.PlayerHorse
+
+	if !horse.Dope() {
+		// Not enough money
+		result := &models.TrainingResult{
+			Success: false,
+			Message: "Not enough money for doping! You need $5000.",
+		}
+		m.lastResult = result
+		m.mode = ViewingTrainingResult
+		return m, nil
+	}
+
+	// Successful doping
+	result := &models.TrainingResult{
+		Success: true,
+		Message: "💊 Doping successful! All max stats increased by 50 points.",
+	}
+	m.lastResult = result
+	m.mode = ViewingTrainingResult
+
+	return m, nil
 }
 
 type WeekCompleteMsg struct{}

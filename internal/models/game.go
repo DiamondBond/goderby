@@ -20,12 +20,13 @@ type GameState struct {
 }
 
 type Season struct {
-	Number          int           `json:"number"`
-	CurrentWeek     int           `json:"current_week"`
-	MaxWeeks        int           `json:"max_weeks"`
-	TrainingDays    []TrainingDay `json:"training_days"`
-	CompletedRaces  []string      `json:"completed_races"` // Race IDs
-	SeasonStartDate time.Time     `json:"season_start_date"`
+	Number          int                            `json:"number"`
+	CurrentWeek     int                            `json:"current_week"`
+	MaxWeeks        int                            `json:"max_weeks"`
+	TrainingDays    []TrainingDay                  `json:"training_days"`
+	CompletedRaces  []string                       `json:"completed_races"` // Race IDs
+	RaceResults     map[string]CompletedRaceResult `json:"race_results"`    // Race ID -> Result
+	SeasonStartDate time.Time                      `json:"season_start_date"`
 }
 
 type TrainingDay struct {
@@ -44,6 +45,7 @@ func NewSeason(number int) Season {
 		MaxWeeks:        24, // 6 months
 		TrainingDays:    make([]TrainingDay, 0),
 		CompletedRaces:  make([]string, 0),
+		RaceResults:     make(map[string]CompletedRaceResult),
 		SeasonStartDate: time.Now(),
 	}
 }

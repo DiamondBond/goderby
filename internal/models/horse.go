@@ -410,6 +410,32 @@ func (h *Horse) ApplyRaceResults(position int, totalEntrants int) {
 	h.Fatigue = min(h.Fatigue+25, 100)
 }
 
+// Dope increases all max stats by 50 and costs 5000
+func (h *Horse) Dope() bool {
+	const dopeCost = 5000
+	const maxStatIncrease = 50
+
+	if h.Money < dopeCost {
+		return false
+	}
+
+	h.Money -= dopeCost
+	h.MaxStamina += maxStatIncrease
+	h.MaxSpeed += maxStatIncrease
+	h.MaxTechnique += maxStatIncrease
+	h.MaxMental += maxStatIncrease
+
+	return true
+}
+
+// AreAllStatsMaxed checks if all current stats are at their maximum
+func (h *Horse) AreAllStatsMaxed() bool {
+	return h.Stamina >= h.MaxStamina &&
+		h.Speed >= h.MaxSpeed &&
+		h.Technique >= h.MaxTechnique &&
+		h.Mental >= h.MaxMental
+}
+
 func calculateSupporterBonus(supporters []Supporter, trainingType TrainingType) int {
 	bonus := 0
 	for _, supporter := range supporters {

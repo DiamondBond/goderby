@@ -118,6 +118,19 @@ type RaceProgressUpdate struct {
 	Events     []string       `json:"events"`
 }
 
+// CompletedRaceResult represents a historical race result for season tracking
+type CompletedRaceResult struct {
+	RaceID        string    `json:"race_id"`
+	RaceName      string    `json:"race_name"`
+	Grade         RaceGrade `json:"grade"`
+	Distance      int       `json:"distance"`
+	Date          time.Time `json:"date"`
+	Position      int       `json:"position"`
+	TotalEntrants int       `json:"total_entrants"`
+	PrizeMoney    int       `json:"prize_money"`
+	FansGained    int       `json:"fans_gained"`
+}
+
 func NewRace(name string, distance int, grade RaceGrade, prize int, minRating int) *Race {
 	return &Race{
 		ID:          generateID(),
