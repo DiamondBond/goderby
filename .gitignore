@@ -5,7 +5,6 @@
 *.so
 *.dylib
 goderby
-assets/saves/game.json
 
 # Test binary, built with `go test -c`
 *.test

@@ -32,7 +32,7 @@ func (dl *DataLoader) LoadRaces() ([]models.Race, error) {
 }
 
 func (dl *DataLoader) SaveGameState(gameState *models.GameState) error {
-	savePath := "game.json"
+	savePath := "save.json"
 	data, err := json.MarshalIndent(gameState, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal game state: %w", err)
@@ -46,8 +46,8 @@ func (dl *DataLoader) SaveGameState(gameState *models.GameState) error {
 }
 
 func (dl *DataLoader) LoadGameState() (*models.GameState, error) {
-	// Load from exe directory as game.json
-	savePath := "game.json"
+	// Load from exe directory as save.json
+	savePath := "save.json"
 
 	if _, err := os.Stat(savePath); os.IsNotExist(err) {
 		return models.NewGameState(), nil

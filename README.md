@@ -91,11 +91,6 @@ goderby/
 │   ├── ui/                  # TUI components and views
 │   ├── game/                # Game logic and simulation
 │   └── data/                # Data loading and persistence
-├── assets/                  # Game data files (auto-generated)
-│   ├── horses.json
-│   ├── supporters.json
-│   ├── races.json
-│   └── saves/game.json
 └── go.mod                   # Go module definition
 ```
 

@@ -74,8 +74,7 @@ The game uses Bubble Tea's Model-View-Update pattern with separate models for ea
 
 ### Data Management
 
-- Game state persisted as JSON in `assets/saves/game.json`
-- Static data (horses, supporters, races) loaded from `assets/*.json`
+- Game state persisted as JSON in `save.json`
 - Auto-generated assets directory structure on first run
 
 ### Styling
