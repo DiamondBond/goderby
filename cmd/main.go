@@ -13,7 +13,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const GameVersion = "v1.9.4"
+const GameVersion = "v1.9.6"
 
 type AppModel struct {
 	currentView ui.ViewState
@@ -27,7 +27,8 @@ type AppModel struct {
 	train              ui.TrainModel
 	race               ui.RaceModel
 	supporters         ui.SupportersModel
-	summary            ui.SummaryModel
+	spa                ui.SpaModel
+	summary            *ui.SummaryModel
 	info               ui.InfoModel
 
 	// Data
@@ -130,10 +131,14 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var model tea.Model
 		model, cmd = m.supporters.Update(msg)
 		m.supporters = model.(ui.SupportersModel)
+	case ui.SpaView:
+		var model tea.Model
+		model, cmd = m.spa.Update(msg)
+		m.spa = model.(ui.SpaModel)
 	case ui.SummaryView:
 		var model tea.Model
 		model, cmd = m.summary.Update(msg)
-		m.summary = model.(ui.SummaryModel)
+		m.summary = model.(*ui.SummaryModel)
 	case ui.InfoView:
 		var model tea.Model
 		model, cmd = m.info.Update(msg)
@@ -165,6 +170,8 @@ func (m *AppModel) View() string {
 		return m.race.View()
 	case ui.SupportersView:
 		return m.supporters.View()
+	case ui.SpaView:
+		return m.spa.View()
 	case ui.SummaryView:
 		return m.summary.View()
 	case ui.InfoView:
@@ -216,6 +223,8 @@ func (m *AppModel) initializeData() (*AppModel, tea.Cmd) {
 	m.supporterSelection = ui.NewSupporterSelectionModel(m.gameState)
 	m.train = ui.NewTrainModel(m.gameState)
 	m.race = ui.NewRaceModel(m.gameState, m.availableRaces)
+	m.supporters = ui.NewSupportersModel(m.gameState)
+	m.spa = ui.NewSpaModel(m.gameState)
 	m.summary = ui.NewSummaryModel(m.gameState)
 	m.info = ui.NewInfoModel(GameVersion)
 
@@ -264,6 +273,9 @@ func (m *AppModel) handleMenuSelection(msg ui.MenuSelectionMsg) (*AppModel, tea.
 	case "Supporters":
 		m.currentView = ui.SupportersView
 		m.supporters = ui.NewSupportersModel(m.gameState)
+	case "Horse Spa":
+		m.currentView = ui.SpaView
+		m.spa = ui.NewSpaModel(m.gameState)
 	case "Season Summary":
 		m.currentView = ui.SummaryView
 		m.summary = ui.NewSummaryModel(m.gameState)

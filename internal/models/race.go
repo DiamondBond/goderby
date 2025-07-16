@@ -132,6 +132,24 @@ func NewRace(name string, distance int, grade RaceGrade, prize int, minRating in
 	}
 }
 
+// GetEntryFee returns the cost to enter this race
+func (r *Race) GetEntryFee() int {
+	switch r.Grade {
+	case MaidenRace:
+		return 100
+	case Grade3:
+		return 300
+	case Grade2:
+		return 500
+	case Grade1:
+		return 1000
+	case GradeG1:
+		return 2000
+	default:
+		return 100
+	}
+}
+
 func (r *Race) CanEnter(horse *Horse) bool {
 	if horse.IsRetired {
 		return false

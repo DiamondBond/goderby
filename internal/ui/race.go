@@ -184,7 +184,12 @@ func (m RaceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case SettingStrategy:
 				m.mode = ConfirmingEntry
 			case ConfirmingEntry:
-				return m.startRace()
+				race := m.races[m.selectedRace]
+				entryFee := race.GetEntryFee()
+				if m.gameState.PlayerHorse.Money >= entryFee {
+					return m.startRace()
+				}
+				// If can't afford, do nothing (stay in confirm view)
 			case ViewingResult:
 				// Apply race result and return to main menu
 				return m.completeRace()
@@ -287,8 +292,9 @@ func (m RaceModel) renderRaceListView() string {
 		}
 
 		raceInfo := fmt.Sprintf("%s 🏁 %s (%s)", cursor, race.Name, race.Grade.String())
-		raceInfo += fmt.Sprintf("\n   Distance: %dm | Prize: $%d | Min Rating: %d",
-			race.Distance, race.Prize, race.MinRating)
+		raceInfo += fmt.Sprintf("\n   Distance: %dm | Prize: $%d | Entry Fee: $%d",
+			race.Distance, race.Prize, race.GetEntryFee())
+		raceInfo += fmt.Sprintf("\n   Min Rating: %d", race.MinRating)
 
 		if m.selectedRace == i {
 			b.WriteString(RenderCard(raceInfo, true))
@@ -342,10 +348,13 @@ func (m RaceModel) renderConfirmView() string {
 
 	race := m.races[m.selectedRace]
 	horse := m.gameState.PlayerHorse
+	entryFee := race.GetEntryFee()
 
 	confirmInfo := fmt.Sprintf("Race: %s (%s)\n", race.Name, race.Grade.String())
-	confirmInfo += fmt.Sprintf("Distance: %dm | Prize: $%d\n\n", race.Distance, race.Prize)
+	confirmInfo += fmt.Sprintf("Distance: %dm | Prize: $%d\n", race.Distance, race.Prize)
+	confirmInfo += fmt.Sprintf("Entry Fee: $%d\n\n", entryFee)
 	confirmInfo += fmt.Sprintf("Horse: %s (Rating: %d)\n", horse.Name, horse.GetOverallRating())
+	confirmInfo += fmt.Sprintf("Money: $%d\n", horse.Money)
 	confirmInfo += fmt.Sprintf("Formation: %s | Pace: %s\n\n",
 		m.selectedStrat.Formation.String(), m.selectedStrat.Pace.String())
 	confirmInfo += "Current Status:\n"
@@ -354,14 +363,28 @@ func (m RaceModel) renderConfirmView() string {
 	b.WriteString(cardStyle.Render(confirmInfo))
 	b.WriteString("\n\n")
 
+	// Check for warnings
 	if horse.Fatigue > 60 {
 		b.WriteString(RenderWarning("Warning: Your horse has high fatigue!"))
 		b.WriteString("\n")
 	}
+	if horse.Morale < 50 {
+		b.WriteString(RenderWarning("Warning: Your horse has low morale!"))
+		b.WriteString("\n")
+	}
+	if horse.Money < entryFee {
+		b.WriteString(RenderError("Error: Not enough money for entry fee!"))
+		b.WriteString("\n")
+	}
 
-	b.WriteString(RenderButton("Enter Race (Enter)", true))
+	canAfford := horse.Money >= entryFee
+	b.WriteString(RenderButton("Enter Race (Enter)", canAfford))
 	b.WriteString("\n\n")
-	b.WriteString(RenderHelp("Enter to confirm, ESC to go back"))
+	if canAfford {
+		b.WriteString(RenderHelp("Enter to confirm, ESC to go back"))
+	} else {
+		b.WriteString(RenderHelp("Need more money to enter! ESC to go back"))
+	}
 
 	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
 }
@@ -700,6 +723,18 @@ func (m RaceModel) renderResultView() string {
 }
 
 func (m RaceModel) startRace() (RaceModel, tea.Cmd) {
+	race := m.races[m.selectedRace]
+	entryFee := race.GetEntryFee()
+
+	// Check if player can afford entry fee
+	if m.gameState.PlayerHorse.Money < entryFee {
+		// Stay in confirm view, the UI will show the error
+		return m, nil
+	}
+
+	// Charge entry fee
+	m.gameState.PlayerHorse.Money -= entryFee
+
 	// Reset acquired supporter for new race
 	m.acquiredSupporter = nil
 
@@ -710,8 +745,6 @@ func (m RaceModel) startRace() (RaceModel, tea.Cmd) {
 	m.obedienceCounter = 0
 	m.isDisobedient = false
 	m.lastWhipTurn = 0
-
-	race := m.races[m.selectedRace]
 
 	// Add player horse to race
 	race.AddEntrant(m.gameState.PlayerHorse.ID)
@@ -752,11 +785,9 @@ func (m RaceModel) completeRace() (RaceModel, tea.Cmd) {
 		horse.Wins++
 	}
 
-	// Add some fatigue from racing
-	horse.Fatigue += 25
-	if horse.Fatigue > 100 {
-		horse.Fatigue = 100
-	}
+	// Apply race results including morale and fatigue changes
+	totalEntrants := len(m.result.Results)
+	horse.ApplyRaceResults(m.result.PlayerRank, totalEntrants)
 
 	// Update game stats
 	m.gameState.GameStats.TotalRaces++
@@ -910,12 +941,16 @@ func (m *RaceModel) useWhip() (RaceModel, tea.Cmd) {
 	m.whipUses++
 	m.lastWhipTurn = m.currentTurn
 
-	// Check for disobedience based on whip uses
-	// More whips = higher chance of disobedience
-	disobedienceChance := float64(m.whipUses) * 0.15 // 15% per whip use
+	// Enhanced disobedience calculation using horse stats
+	horse := m.gameState.PlayerHorse
+	disobedienceChance := horse.CalculateDisobedienceChance(m.whipUses)
+
 	if rand.Float64() < disobedienceChance {
 		m.isDisobedient = true
-		m.obedienceCounter = 5 // Disobedient for 5 turns
+		// Duration of disobedience varies based on mental stat
+		baseDuration := 5
+		mentalModifier := (horse.Mental - 50) / 20               // Better mental = shorter disobedience
+		m.obedienceCounter = max(baseDuration-mentalModifier, 2) // Min 2 turns, max varies
 	}
 
 	return *m, nil

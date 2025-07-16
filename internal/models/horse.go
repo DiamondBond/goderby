@@ -1,9 +1,10 @@
 package models
 
 import (
-	"crypto/rand"
+	cryptorand "crypto/rand"
 	"encoding/hex"
 	"math"
+	"math/rand"
 	"time"
 )
 
@@ -65,40 +66,79 @@ func (h *Horse) Train(trainingType TrainingType, supporters []Supporter) Trainin
 
 	bonus := calculateSupporterBonus(supporters, trainingType)
 	baseGain := 10 + bonus
-	// Use proper rounding instead of truncation for morale calculation
-	moraleMultiplier := float64(h.Morale) / 100.0
+
+	// Enhanced morale multiplier system
+	var moraleMultiplier float64
+	if h.Morale >= 100 {
+		moraleMultiplier = 1.20 // 20% bonus for excellent morale
+	} else if h.Morale >= 80 {
+		moraleMultiplier = 1.10 // 10% bonus for good morale
+	} else if h.Morale >= 60 {
+		moraleMultiplier = 1.00 // Normal training
+	} else if h.Morale >= 40 {
+		moraleMultiplier = 0.90 // 10% penalty for low morale
+	} else {
+		moraleMultiplier = 0.80 // 20% penalty for very low morale
+	}
+
 	actualGain := int(math.Round(float64(baseGain) * moraleMultiplier))
 
+	// Track if stat was at max before training
+	wasAtMax := false
 	switch trainingType {
 	case StaminaTraining:
+		wasAtMax = h.Stamina >= h.MaxStamina
 		if h.Stamina < h.MaxStamina {
 			h.Stamina = min(h.Stamina+actualGain, h.MaxStamina)
 		}
 	case SpeedTraining:
+		wasAtMax = h.Speed >= h.MaxSpeed
 		if h.Speed < h.MaxSpeed {
 			h.Speed = min(h.Speed+actualGain, h.MaxSpeed)
 		}
 	case TechniqueTraining:
+		wasAtMax = h.Technique >= h.MaxTechnique
 		if h.Technique < h.MaxTechnique {
 			h.Technique = min(h.Technique+actualGain, h.MaxTechnique)
 		}
 	case MentalTraining:
+		wasAtMax = h.Mental >= h.MaxMental
 		if h.Mental < h.MaxMental {
 			h.Mental = min(h.Mental+actualGain, h.MaxMental)
 		}
 	}
 
+	// Apply fatigue
 	h.Fatigue += 15
 	if h.Fatigue > 100 {
 		h.Fatigue = 100
 	}
 
-	return TrainingResult{
+	// Daily morale decay (-2 per training session)
+	h.Morale = max(h.Morale-2, 20)
+
+	// Bonus morale for maxing out a stat
+	if !wasAtMax && h.IsStatMaxed(trainingType) {
+		h.Morale = min(h.Morale+5, 100)
+	}
+
+	// Generate random training event
+	event := h.generateTrainingEvent()
+	result := TrainingResult{
 		Success:     true,
 		Message:     "Training completed successfully!",
 		StatGain:    actualGain,
 		FatigueGain: 15,
+		Event:       event,
 	}
+
+	// Apply event effects if any
+	if event != nil {
+		result.Message = event.Description
+		h.applyEventEffects(event.Effects)
+	}
+
+	return result
 }
 
 func (h *Horse) Rest() {
@@ -196,7 +236,7 @@ type TrainingResult struct {
 func generateID() string {
 	// Generate a UUID-like random ID to prevent collisions
 	bytes := make([]byte, 8)
-	if _, err := rand.Read(bytes); err != nil {
+	if _, err := cryptorand.Read(bytes); err != nil {
 		// Fallback to timestamp with nanosecond precision if crypto/rand fails
 		return time.Now().Format("20060102150405.000000000")
 	}
@@ -215,6 +255,159 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// IsStatMaxed checks if the given training type's stat is at maximum
+func (h *Horse) IsStatMaxed(trainingType TrainingType) bool {
+	switch trainingType {
+	case StaminaTraining:
+		return h.Stamina >= h.MaxStamina
+	case SpeedTraining:
+		return h.Speed >= h.MaxSpeed
+	case TechniqueTraining:
+		return h.Technique >= h.MaxTechnique
+	case MentalTraining:
+		return h.Mental >= h.MaxMental
+	default:
+		return false
+	}
+}
+
+// generateTrainingEvent creates random events during training
+func (h *Horse) generateTrainingEvent() *Event {
+	// 15% chance for an event to occur
+	if rand.Float64() > 0.15 {
+		return nil
+	}
+
+	events := []Event{
+		{
+			ID:          "good_weather",
+			Name:        "Good Weather Day",
+			Description: "☀️ Beautiful weather boosted your horse's spirits!",
+			Effects:     map[string]int{"morale": 10},
+		},
+		{
+			ID:          "friendly_visitor",
+			Name:        "Friendly Visitor",
+			Description: "👋 A friendly fan visited and cheered your horse on!",
+			Effects:     map[string]int{"morale": 15, "fan_support": 50},
+		},
+		{
+			ID:          "bad_weather",
+			Name:        "Bad Weather",
+			Description: "🌧️ Rain made training unpleasant...",
+			Effects:     map[string]int{"morale": -5},
+		},
+		{
+			ID:          "injury_scare",
+			Name:        "Minor Injury Scare",
+			Description: "😰 A stumble scared your horse, but no real injury!",
+			Effects:     map[string]int{"morale": -10, "fatigue": 10},
+		},
+		{
+			ID:          "great_workout",
+			Name:        "Excellent Training Session",
+			Description: "💪 Your horse felt amazing during training!",
+			Effects:     map[string]int{"morale": 8, "fatigue": -5},
+		},
+		{
+			ID:          "distracted",
+			Name:        "Distracted Training",
+			Description: "😵‍💫 Your horse seemed unfocused today...",
+			Effects:     map[string]int{"morale": -3},
+		},
+	}
+
+	// Weight events based on current horse condition
+	var weightedEvents []Event
+	for _, event := range events {
+		// Good events more likely with higher morale
+		if event.Effects["morale"] > 0 && h.Morale >= 70 {
+			weightedEvents = append(weightedEvents, event, event) // Double chance
+		} else if event.Effects["morale"] < 0 && h.Morale <= 40 {
+			weightedEvents = append(weightedEvents, event, event) // Double chance for bad events when morale is low
+		} else {
+			weightedEvents = append(weightedEvents, event)
+		}
+	}
+
+	if len(weightedEvents) == 0 {
+		return nil
+	}
+
+	selectedEvent := weightedEvents[rand.Intn(len(weightedEvents))]
+	return &selectedEvent
+}
+
+// applyEventEffects applies the effects of an event to the horse
+func (h *Horse) applyEventEffects(effects map[string]int) {
+	for effect, value := range effects {
+		switch effect {
+		case "morale":
+			h.Morale = min(max(h.Morale+value, 20), 100)
+		case "fatigue":
+			h.Fatigue = min(max(h.Fatigue+value, 0), 100)
+		case "fan_support":
+			h.FanSupport = max(h.FanSupport+value, 0)
+		case "stamina":
+			h.Stamina = min(max(h.Stamina+value, 0), h.MaxStamina)
+		case "speed":
+			h.Speed = min(max(h.Speed+value, 0), h.MaxSpeed)
+		case "technique":
+			h.Technique = min(max(h.Technique+value, 0), h.MaxTechnique)
+		case "mental":
+			h.Mental = min(max(h.Mental+value, 0), h.MaxMental)
+		}
+	}
+}
+
+// CalculateDisobedienceChance calculates the chance of disobedience based on horse's condition
+func (h *Horse) CalculateDisobedienceChance(whipUsageCount int) float64 {
+	baseChance := 0.05 // 5% base chance
+
+	// Fatigue modifier (0-30% additional chance)
+	fatigueModifier := float64(h.Fatigue) * 0.003 // 0.3% per fatigue point
+
+	// Morale modifier (-15% to +15% chance)
+	moraleModifier := (50.0 - float64(h.Morale)) * 0.003 // 0.3% per point below 50
+
+	// Mental modifier (-10% to +10% chance)
+	mentalModifier := (50.0 - float64(h.Mental)) * 0.002 // 0.2% per point below 50
+
+	// Whip abuse modifier (escalating penalty)
+	whipAbuseModifier := float64(whipUsageCount) * 0.05 // 5% per recent whip use
+
+	totalChance := baseChance + fatigueModifier + moraleModifier + mentalModifier + whipAbuseModifier
+
+	// Cap between 5% and 80%
+	if totalChance < 0.05 {
+		return 0.05
+	}
+	if totalChance > 0.80 {
+		return 0.80
+	}
+	return totalChance
+}
+
+// ApplyRaceResults applies morale changes based on race performance
+func (h *Horse) ApplyRaceResults(position int, totalEntrants int) {
+	// Morale changes based on race position
+	switch {
+	case position == 1:
+		h.Morale = min(h.Morale+20, 100) // Big morale boost for winning
+	case position <= 3:
+		h.Morale = min(h.Morale+10, 100) // Good morale for podium finish
+	case position <= totalEntrants/2:
+		h.Morale = min(h.Morale+5, 100) // Small boost for decent finish
+	case position <= totalEntrants*3/4:
+		// No change for middle finish
+	default:
+		h.Morale = max(h.Morale-10, 20) // Morale penalty for poor finish
+	}
+
+	// Fatigue from racing
+	h.Fatigue = min(h.Fatigue+25, 100)
 }
 
 func calculateSupporterBonus(supporters []Supporter, trainingType TrainingType) int {

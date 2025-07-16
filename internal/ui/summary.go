@@ -12,9 +12,22 @@ import (
 )
 
 type SummaryModel struct {
-	gameState  *models.GameState
-	mode       SummaryMode
-	canAdvance bool
+	gameState         *models.GameState
+	mode              SummaryMode
+	canAdvance        bool
+	cursor            int
+	viewStart         int
+	maxVisible        int
+	sections          []SummarySection
+	raceHistoryCursor int
+	raceHistoryStart  int
+	maxRacesVisible   int
+}
+
+type SummarySection struct {
+	Title   string
+	Content string
+	Icon    string
 }
 
 type SummaryMode int
@@ -30,19 +43,28 @@ const (
 	ShareableRetirementCard
 )
 
-func NewSummaryModel(gameState *models.GameState) SummaryModel {
-	return SummaryModel{
-		gameState:  gameState,
-		mode:       ViewingSeason,
-		canAdvance: gameState.Season.IsComplete(),
+func NewSummaryModel(gameState *models.GameState) *SummaryModel {
+	model := &SummaryModel{
+		gameState:         gameState,
+		mode:              ViewingSeason,
+		canAdvance:        gameState.Season.IsComplete(),
+		cursor:            0,
+		viewStart:         0,
+		maxVisible:        3, // Show 3 sections at a time like horse selection
+		sections:          []SummarySection{},
+		raceHistoryCursor: 0,
+		raceHistoryStart:  0,
+		maxRacesVisible:   3, // Show 3 races at a time in race history
 	}
+	model.buildSections()
+	return model
 }
 
-func (m SummaryModel) Init() tea.Cmd {
+func (m *SummaryModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m SummaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *SummaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -50,6 +72,63 @@ func (m SummaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, func() tea.Msg {
 				return NavigationMsg{State: MainMenuView}
 			}
+		case "up", "k":
+			if m.cursor > 0 {
+				m.cursor--
+				if m.cursor < m.viewStart {
+					m.viewStart = m.cursor
+				}
+				// Reset race history scroll when changing sections
+				m.raceHistoryCursor = 0
+				m.raceHistoryStart = 0
+			}
+			return m, nil
+		case "down", "j":
+			if m.cursor < len(m.sections)-1 {
+				m.cursor++
+				if m.cursor >= m.viewStart+m.maxVisible {
+					m.viewStart = m.cursor - m.maxVisible + 1
+				}
+				// Reset race history scroll when changing sections
+				m.raceHistoryCursor = 0
+				m.raceHistoryStart = 0
+			}
+			return m, nil
+		case "left", "h":
+			// Handle horizontal scrolling in race history section
+			if m.isRaceHistorySelected() {
+				if m.raceHistoryCursor > 0 {
+					m.raceHistoryCursor--
+					if m.raceHistoryCursor < m.raceHistoryStart {
+						m.raceHistoryStart = m.raceHistoryCursor
+					}
+				}
+			}
+			return m, nil
+		case "right", "l":
+			// Handle horizontal scrolling in race history section
+			if m.isRaceHistorySelected() {
+				uniqueRaces := m.getUniqueRaces()
+				if m.raceHistoryCursor < len(uniqueRaces)-1 {
+					m.raceHistoryCursor++
+					if m.raceHistoryCursor >= m.raceHistoryStart+m.maxRacesVisible {
+						m.raceHistoryStart = m.raceHistoryCursor - m.maxRacesVisible + 1
+					}
+				}
+			}
+			return m, nil
+		case "home":
+			m.cursor = 0
+			m.viewStart = 0
+			return m, nil
+		case "end":
+			m.cursor = len(m.sections) - 1
+			if m.cursor >= m.maxVisible {
+				m.viewStart = m.cursor - m.maxVisible + 1
+			} else {
+				m.viewStart = 0
+			}
+			return m, nil
 		case "esc":
 			if m.mode == ViewingSeason {
 				return m, func() tea.Msg {
@@ -77,7 +156,7 @@ func (m SummaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.mode = RetiredHorsesGallery
 				return m, nil
 			}
-		case "h":
+		case "b": // Changed from "h" to avoid conflict with left navigation
 			if m.mode == RetirementCeremony {
 				m.mode = RetirementHomes
 				return m, nil
@@ -104,7 +183,7 @@ func (m SummaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m SummaryModel) View() string {
+func (m *SummaryModel) View() string {
 	var b strings.Builder
 
 	if m.gameState.PlayerHorse == nil {
@@ -138,122 +217,74 @@ func (m SummaryModel) View() string {
 	}
 }
 
-func (m SummaryModel) renderSeasonSummaryView() string {
+func (m *SummaryModel) renderSeasonSummaryView() string {
 	var b strings.Builder
 
-	horse := m.gameState.PlayerHorse
 	season := m.gameState.Season
 
 	b.WriteString(RenderTitle(fmt.Sprintf("Season %d Summary", season.Number)))
 	b.WriteString("\n\n")
 
-	// Horse progress
-	b.WriteString(RenderHeader(fmt.Sprintf("%s's Progress", horse.Name)))
-	b.WriteString("\n")
-
-	progressInfo := fmt.Sprintf("Age: %d years old\n", horse.Age)
-	progressInfo += fmt.Sprintf("Overall Rating: %d\n", horse.GetOverallRating())
-	progressInfo += fmt.Sprintf("Races: %d | Wins: %d (%.1f%%)\n",
-		horse.Races, horse.Wins, m.getWinPercentage(horse))
-	progressInfo += fmt.Sprintf("Total Fans: %d | Money: $%d\n", horse.FanSupport, horse.Money)
-
-	b.WriteString(cardStyle.Render(progressInfo))
-	b.WriteString("\n\n")
-
-	// Current stats
-	b.WriteString(RenderHeader("Final Stats"))
-	b.WriteString("\n")
-	statsCard := m.renderStatsCard(horse)
-	b.WriteString(cardStyle.Render(statsCard))
-	b.WriteString("\n\n")
-
-	// Season achievements
-	b.WriteString(RenderHeader("Season Achievements"))
-	b.WriteString("\n")
-	achievements := m.getSeasonAchievements(season)
-	b.WriteString(cardStyle.Render(achievements))
-	b.WriteString("\n\n")
-
-	// Training summary
-	b.WriteString(RenderHeader("Training Summary"))
-	b.WriteString("\n")
-	trainingSum := m.getTrainingSummary(season)
-	b.WriteString(cardStyle.Render(trainingSum))
-	b.WriteString("\n\n")
-
-	// Lifetime Career Stats
-	b.WriteString(RenderHeader("Lifetime Career Stats"))
-	b.WriteString("\n")
-	lifetimeStats := m.renderLifetimeStats(horse)
-	b.WriteString(cardStyle.Render(lifetimeStats))
-	b.WriteString("\n\n")
-
-	// Social sharing options
-	b.WriteString(RenderHeader("📤 Sharing"))
-	b.WriteString("\n")
-	b.WriteString(RenderButton("Create Shareable Profile Card (p)", true))
-	b.WriteString("\n")
-	b.WriteString(RenderButton("Create Season Summary Card (s)", true))
-	b.WriteString("\n\n")
-
-	// Retired horses gallery link
-	if len(m.gameState.RetiredHorses) > 0 {
-		b.WriteString(RenderButton(fmt.Sprintf("View Retired Horses Gallery (%d horses) (g)", len(m.gameState.RetiredHorses)), false))
-		b.WriteString("\n\n")
+	// Calculate visible window
+	viewEnd := m.viewStart + m.maxVisible
+	if viewEnd > len(m.sections) {
+		viewEnd = len(m.sections)
 	}
 
-	// Next season or retirement
-	if m.canAdvance {
-		if horse.Age >= 10 {
-			b.WriteString(RenderWarning("Your horse has reached retirement age (10+ years). Time to retire!"))
-			b.WriteString("\n\n")
-			b.WriteString(RenderButton("Begin Retirement Ceremony (r)", true))
-			b.WriteString("\n\n")
-		} else if horse.Age >= 8 {
-			b.WriteString(RenderWarning("Your horse is getting old. Consider retirement or continue for one more season."))
-			b.WriteString("\n\n")
-			b.WriteString(RenderButton("Advance to Next Season (Enter/n)", true))
-			b.WriteString("  ")
-			b.WriteString(RenderButton("Retire Horse (r)", false))
-			b.WriteString("\n\n")
-		} else {
-			b.WriteString(RenderSuccess("Ready to advance to next season!"))
-			b.WriteString("\n\n")
-			b.WriteString(RenderButton("Advance to Next Season (Enter/n)", true))
-			b.WriteString("\n\n")
+	// Render only visible sections
+	for i := m.viewStart; i < viewEnd; i++ {
+		section := m.sections[i]
+		cursor := "  "
+		if m.cursor == i {
+			cursor = ">"
 		}
 
-		var helpText string
-		if horse.Age >= 8 {
-			helpText = "Enter/n to advance season, r to retire"
-		} else {
-			helpText = "Enter/n to advance season"
+		// Section header with cursor
+		sectionHeader := fmt.Sprintf("%s %s %s", cursor, section.Icon, section.Title)
+		if m.cursor == i {
+			sectionHeader = RenderSuccess(sectionHeader)
 		}
-		if len(m.gameState.RetiredHorses) > 0 {
-			helpText += ", g for gallery"
-		}
-		helpText += ", p/s for shareable cards, ESC/q to go back"
-		b.WriteString(RenderHelp(helpText))
-	} else {
-		b.WriteString(RenderInfo(fmt.Sprintf("Season in progress - Week %d/%d", season.CurrentWeek, season.MaxWeeks)))
-		b.WriteString("\n\n")
 
-		var helpText string
-		if horse.Age >= 8 {
-			helpText = "r to retire"
+		b.WriteString(sectionHeader)
+		b.WriteString("\n")
+
+		// Section content - rebuild race history dynamically
+		content := section.Content
+		if m.cursor == i && m.isRaceHistorySelected() {
+			content = m.getRaceHistoryScrollable(m.gameState.Season)
 		}
-		if len(m.gameState.RetiredHorses) > 0 {
-			if helpText != "" {
-				helpText += ", "
+
+		if m.cursor == i {
+			b.WriteString(cardStyle.Render(content))
+		} else {
+			// Show abbreviated content for non-selected sections
+			lines := strings.Split(section.Content, "\n")
+			if len(lines) > 0 {
+				preview := lines[0]
+				if len(preview) > 60 {
+					preview = preview[:57] + "..."
+				}
+				b.WriteString(RenderCard(preview, false))
 			}
-			helpText += "g for gallery"
 		}
-		if helpText != "" {
-			helpText += ", "
-		}
-		helpText += "p/s for shareable cards, ESC/q to go back"
-		b.WriteString(RenderHelp(helpText))
+		b.WriteString("\n\n")
 	}
+
+	// Scroll indicators
+	if len(m.sections) > m.maxVisible {
+		scrollInfo := fmt.Sprintf("Section %d of %d", m.cursor+1, len(m.sections))
+		if m.viewStart > 0 {
+			scrollInfo += " ↑"
+		}
+		if viewEnd < len(m.sections) {
+			scrollInfo += " ↓"
+		}
+		b.WriteString(RenderInfo(scrollInfo))
+		b.WriteString("\n")
+	}
+
+	// Action buttons and help text
+	b.WriteString(m.renderActionButtons())
 
 	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
 }
@@ -357,6 +388,204 @@ func (m SummaryModel) getSeasonAchievements(season models.Season) string {
 	return achievements.String()
 }
 
+func (m *SummaryModel) getRaceHistory(season models.Season) string {
+	var history strings.Builder
+
+	if len(season.CompletedRaces) == 0 {
+		history.WriteString("No races completed this season yet.\n")
+		history.WriteString("Visit the Race menu to enter your first race!")
+		return history.String()
+	}
+
+	history.WriteString(fmt.Sprintf("🏁 Season %d Race History (%d races):\n\n", season.Number, len(season.CompletedRaces)))
+
+	// Group races by unique race ID to avoid duplicates in display
+	uniqueRaces := make(map[string]int) // raceID -> count
+	for _, raceID := range season.CompletedRaces {
+		uniqueRaces[raceID]++
+	}
+
+	raceCount := 1
+	for raceID, count := range uniqueRaces {
+		// Find race details from available races
+		var raceDetails *models.Race
+		isFallback := false
+		for _, race := range m.gameState.AvailableRaces {
+			if race.ID == raceID {
+				raceDetails = &race
+				break
+			}
+		}
+
+		if raceDetails == nil {
+			// Create a fallback race entry with estimated details
+			raceDetails = m.createFallbackRace(raceID, count)
+			isFallback = true
+		}
+
+		// Display race information
+		gradeIcon := m.getGradeIcon(raceDetails.Grade)
+		nameDisplay := raceDetails.Name
+		if isFallback {
+			nameDisplay += " (Estimated)"
+		}
+		history.WriteString(fmt.Sprintf("%d. %s %s (%s)\n", raceCount, gradeIcon, nameDisplay, raceDetails.Grade.String()))
+		history.WriteString(fmt.Sprintf("   📏 Distance: %dm | 💰 Prize Pool: $%d\n", raceDetails.Distance, raceDetails.Prize))
+
+		// Show race date if available
+		if !raceDetails.Date.IsZero() {
+			history.WriteString(fmt.Sprintf("   📅 Date: %s\n", raceDetails.Date.Format("Jan 2, 2006")))
+		}
+
+		if count > 1 {
+			history.WriteString(fmt.Sprintf("   🔄 Entered %d times this season\n", count))
+		}
+
+		// Estimate performance based on current horse stats and race requirements
+		performance := m.estimateRacePerformance(raceDetails)
+		performanceIcon := m.getPerformanceIcon(performance)
+		history.WriteString(fmt.Sprintf("   %s Performance: %s\n", performanceIcon, performance))
+
+		// Add earnings estimate
+		earnings := m.estimateEarnings(raceDetails, count)
+		if earnings > 0 {
+			history.WriteString(fmt.Sprintf("   💵 Est. Earnings: $%d\n", earnings))
+		}
+
+		// Add difficulty indicator
+		difficulty := m.getRaceDifficulty(raceDetails)
+		history.WriteString(fmt.Sprintf("   🎯 Difficulty: %s\n", difficulty))
+
+		history.WriteString("\n")
+		raceCount++
+	}
+
+	// Add season race statistics summary
+	horse := m.gameState.PlayerHorse
+	winRate := 0.0
+	if horse.Races > 0 {
+		winRate = float64(horse.Wins) / float64(horse.Races) * 100
+	}
+
+	history.WriteString("📊 Season Racing Summary:\n")
+	history.WriteString(fmt.Sprintf("• Total Race Entries: %d\n", len(season.CompletedRaces)))
+	history.WriteString(fmt.Sprintf("• Unique Races Competed: %d\n", len(uniqueRaces)))
+	history.WriteString(fmt.Sprintf("• Career Record: %d wins in %d races (%.1f%%)\n", horse.Wins, horse.Races, winRate))
+	history.WriteString(fmt.Sprintf("• Total Career Earnings: $%d\n", horse.Money))
+	history.WriteString(fmt.Sprintf("• Fan Support Gained: %d fans\n", horse.FanSupport))
+
+	// Calculate grade distribution
+	gradeStats := make(map[models.RaceGrade]int)
+	for raceID := range uniqueRaces {
+		for _, race := range m.gameState.AvailableRaces {
+			if race.ID == raceID {
+				gradeStats[race.Grade]++
+				break
+			}
+		}
+	}
+
+	if len(gradeStats) > 0 {
+		history.WriteString("• Grade Distribution: ")
+		first := true
+		for grade, count := range gradeStats {
+			if !first {
+				history.WriteString(", ")
+			}
+			history.WriteString(fmt.Sprintf("%s×%d", grade.String(), count))
+			first = false
+		}
+		history.WriteString("\n")
+	}
+
+	return history.String()
+}
+
+func (m *SummaryModel) estimateRacePerformance(race *models.Race) string {
+	horse := m.gameState.PlayerHorse
+	horseRating := horse.GetOverallRating()
+
+	// Basic performance estimation based on rating vs race requirements
+	if horseRating >= race.MinRating+100 {
+		return "Excellent (likely podium finish)"
+	} else if horseRating >= race.MinRating+50 {
+		return "Good (competitive performance)"
+	} else if horseRating >= race.MinRating+25 {
+		return "Fair (middle of pack)"
+	} else if horseRating >= race.MinRating {
+		return "Challenging (met minimum requirements)"
+	} else {
+		return "Very challenging (below minimum rating)"
+	}
+}
+
+func (m *SummaryModel) estimateEarnings(race *models.Race, raceCount int) int {
+	horse := m.gameState.PlayerHorse
+
+	// Estimate earnings based on likely finishing position
+	horseRating := horse.GetOverallRating()
+	estimatedPosition := 4 // Default to mid-pack
+
+	if horseRating >= race.MinRating+100 {
+		estimatedPosition = 1 // Likely winner
+	} else if horseRating >= race.MinRating+50 {
+		estimatedPosition = 2 // Likely runner-up
+	} else if horseRating >= race.MinRating+25 {
+		estimatedPosition = 3 // Likely third
+	}
+
+	prizePerRace := race.GetPrizeForPosition(estimatedPosition)
+	return prizePerRace * raceCount
+}
+
+func (m *SummaryModel) getGradeIcon(grade models.RaceGrade) string {
+	switch grade {
+	case models.MaidenRace:
+		return "🌱" // Beginner
+	case models.Grade3:
+		return "🥉" // Bronze
+	case models.Grade2:
+		return "🥈" // Silver
+	case models.Grade1:
+		return "🥇" // Gold
+	case models.GradeG1:
+		return "👑" // Crown for top tier
+	default:
+		return "🏁"
+	}
+}
+
+func (m *SummaryModel) getPerformanceIcon(performance string) string {
+	if strings.Contains(performance, "Excellent") {
+		return "🌟"
+	} else if strings.Contains(performance, "Good") {
+		return "✅"
+	} else if strings.Contains(performance, "Fair") {
+		return "⚖️"
+	} else if strings.Contains(performance, "Challenging") {
+		return "⚠️"
+	}
+	return "📊"
+}
+
+func (m *SummaryModel) getRaceDifficulty(race *models.Race) string {
+	horse := m.gameState.PlayerHorse
+	horseRating := horse.GetOverallRating()
+	ratingDiff := horseRating - race.MinRating
+
+	if ratingDiff >= 100 {
+		return "Easy ⭐"
+	} else if ratingDiff >= 50 {
+		return "Moderate ⭐⭐"
+	} else if ratingDiff >= 25 {
+		return "Hard ⭐⭐⭐"
+	} else if ratingDiff >= 0 {
+		return "Very Hard ⭐⭐⭐⭐"
+	} else {
+		return "Extreme ⭐⭐⭐⭐⭐"
+	}
+}
+
 func (m SummaryModel) getTrainingSummary(season models.Season) string {
 	var summary strings.Builder
 
@@ -440,7 +669,7 @@ func (m SummaryModel) generateSeasonGoals(seasonNumber int) string {
 	return goals
 }
 
-func (m SummaryModel) advanceSeason() (SummaryModel, tea.Cmd) {
+func (m *SummaryModel) advanceSeason() (*SummaryModel, tea.Cmd) {
 	// Age the horse
 	m.gameState.PlayerHorse.Age++
 
@@ -588,12 +817,12 @@ func (m SummaryModel) renderRetirementCeremonyView() string {
 	b.WriteString(RenderInfo("Select where your horse will spend their retirement years."))
 	b.WriteString("\n\n")
 
-	b.WriteString(RenderButton("Browse Retirement Homes (h)", true))
+	b.WriteString(RenderButton("Browse Retirement Homes (b)", true))
 	b.WriteString("  ")
 	b.WriteString(RenderButton("Create Retirement Card (s)", false))
 	b.WriteString("\n\n")
 
-	b.WriteString(RenderHelp("h to browse retirement homes, s for shareable card, ESC to go back"))
+	b.WriteString(RenderHelp("b to browse retirement homes, s for shareable card, ESC to go back"))
 
 	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
 }
@@ -779,4 +1008,354 @@ func (m SummaryModel) renderShareableRetirementCardView() string {
 	b.WriteString(RenderHelp("ESC to go back"))
 
 	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
+}
+
+func (m *SummaryModel) buildSections() {
+	horse := m.gameState.PlayerHorse
+	season := m.gameState.Season
+
+	// Clear existing sections
+	m.sections = []SummarySection{}
+
+	// Horse Progress Section
+	progressInfo := fmt.Sprintf("Age: %d years old\n", horse.Age)
+	progressInfo += fmt.Sprintf("Overall Rating: %d\n", horse.GetOverallRating())
+	progressInfo += fmt.Sprintf("Races: %d | Wins: %d (%.1f%%)\n",
+		horse.Races, horse.Wins, m.getWinPercentage(horse))
+	progressInfo += fmt.Sprintf("Total Fans: %d | Money: $%d", horse.FanSupport, horse.Money)
+
+	m.sections = append(m.sections, SummarySection{
+		Title:   fmt.Sprintf("%s's Progress", horse.Name),
+		Content: progressInfo,
+		Icon:    "🐎",
+	})
+
+	// Current Stats Section
+	statsCard := m.renderStatsCard(horse)
+	m.sections = append(m.sections, SummarySection{
+		Title:   "Final Stats",
+		Content: statsCard,
+		Icon:    "📊",
+	})
+
+	// Season Achievements Section
+	achievements := m.getSeasonAchievements(season)
+	m.sections = append(m.sections, SummarySection{
+		Title:   "Season Achievements",
+		Content: achievements,
+		Icon:    "🏆",
+	})
+
+	// Training Summary Section
+	trainingSum := m.getTrainingSummary(season)
+	m.sections = append(m.sections, SummarySection{
+		Title:   "Training Summary",
+		Content: trainingSum,
+		Icon:    "💪",
+	})
+
+	// Race History Section
+	raceHistory := m.getRaceHistoryScrollable(season)
+	m.sections = append(m.sections, SummarySection{
+		Title:   "Race History This Season",
+		Content: raceHistory,
+		Icon:    "🏁",
+	})
+
+	// Lifetime Career Stats Section
+	lifetimeStats := m.renderLifetimeStats(horse)
+	m.sections = append(m.sections, SummarySection{
+		Title:   "Lifetime Career Stats",
+		Content: lifetimeStats,
+		Icon:    "📈",
+	})
+
+	// Social Sharing Section
+	sharingContent := "Create shareable cards to show off your horse's achievements!\n\n"
+	sharingContent += "• Create Shareable Profile Card (p)\n"
+	sharingContent += "• Create Season Summary Card (s)"
+	m.sections = append(m.sections, SummarySection{
+		Title:   "Social Sharing",
+		Content: sharingContent,
+		Icon:    "📤",
+	})
+
+	// Retired Horses Gallery (if applicable)
+	if len(m.gameState.RetiredHorses) > 0 {
+		galleryContent := fmt.Sprintf("View your retired horses gallery with %d horses.\n\n", len(m.gameState.RetiredHorses))
+		galleryContent += "Browse through your legendary horses and their achievements!"
+		m.sections = append(m.sections, SummarySection{
+			Title:   "Retired Horses Gallery",
+			Content: galleryContent,
+			Icon:    "🖼️",
+		})
+	}
+}
+
+func (m *SummaryModel) renderActionButtons() string {
+	var b strings.Builder
+	horse := m.gameState.PlayerHorse
+
+	// Next season or retirement actions
+	if m.canAdvance {
+		if horse.Age >= 10 {
+			b.WriteString(RenderWarning("Your horse has reached retirement age (10+ years). Time to retire!"))
+			b.WriteString("\n\n")
+			b.WriteString(RenderButton("Begin Retirement Ceremony (r)", true))
+			b.WriteString("\n\n")
+		} else if horse.Age >= 8 {
+			b.WriteString(RenderWarning("Your horse is getting old. Consider retirement or continue for one more season."))
+			b.WriteString("\n\n")
+			b.WriteString(RenderButton("Advance to Next Season (Enter/n)", true))
+			b.WriteString("  ")
+			b.WriteString(RenderButton("Retire Horse (r)", false))
+			b.WriteString("\n\n")
+		} else {
+			b.WriteString(RenderSuccess("Ready to advance to next season!"))
+			b.WriteString("\n\n")
+			b.WriteString(RenderButton("Advance to Next Season (Enter/n)", true))
+			b.WriteString("\n\n")
+		}
+
+		var helpText string
+		if horse.Age >= 8 {
+			helpText = "Enter/n to advance season, r to retire"
+		} else {
+			helpText = "Enter/n to advance season"
+		}
+		if len(m.gameState.RetiredHorses) > 0 {
+			helpText += ", g for gallery"
+		}
+		helpText += ", p/s for shareable cards, ↑↓/j/k to navigate, ←→/h/l for race history, ESC/q to go back"
+		b.WriteString(RenderHelp(helpText))
+	} else {
+		season := m.gameState.Season
+		b.WriteString(RenderInfo(fmt.Sprintf("Season in progress - Week %d/%d", season.CurrentWeek, season.MaxWeeks)))
+		b.WriteString("\n\n")
+
+		var helpText string
+		if horse.Age >= 8 {
+			helpText = "r to retire"
+		}
+		if len(m.gameState.RetiredHorses) > 0 {
+			if helpText != "" {
+				helpText += ", "
+			}
+			helpText += "g for gallery"
+		}
+		if helpText != "" {
+			helpText += ", "
+		}
+		helpText += "p/s for shareable cards, ↑↓/j/k to navigate, ←→/h/l for race history, ESC/q to go back"
+		b.WriteString(RenderHelp(helpText))
+	}
+
+	return b.String()
+}
+
+func (m *SummaryModel) isRaceHistorySelected() bool {
+	return m.cursor < len(m.sections) && m.sections[m.cursor].Title == "Race History This Season"
+}
+
+func (m *SummaryModel) getUniqueRaces() map[string]int {
+	season := m.gameState.Season
+	uniqueRaces := make(map[string]int)
+	for _, raceID := range season.CompletedRaces {
+		uniqueRaces[raceID]++
+	}
+	return uniqueRaces
+}
+
+func (m *SummaryModel) getRaceHistoryScrollable(season models.Season) string {
+	var history strings.Builder
+
+	uniqueRaces := m.getUniqueRaces()
+	if len(uniqueRaces) == 0 {
+		history.WriteString("No races completed this season yet.\n")
+		history.WriteString("Visit the Race menu to enter your first race!")
+		return history.String()
+	}
+
+	history.WriteString(fmt.Sprintf("🏁 Season %d Race History (%d races):\n\n", season.Number, len(season.CompletedRaces)))
+
+	// Convert map to ordered slice for consistent display
+	type raceEntry struct {
+		id    string
+		count int
+	}
+	var raceList []raceEntry
+	for raceID, count := range uniqueRaces {
+		raceList = append(raceList, raceEntry{id: raceID, count: count})
+	}
+
+	// Calculate visible window for races
+	viewEnd := m.raceHistoryStart + m.maxRacesVisible
+	if viewEnd > len(raceList) {
+		viewEnd = len(raceList)
+	}
+
+	// Show only visible races
+	for i := m.raceHistoryStart; i < viewEnd; i++ {
+		entry := raceList[i]
+		raceID := entry.id
+		count := entry.count
+
+		// Find race details
+		var raceDetails *models.Race
+		isFallback := false
+		for _, race := range m.gameState.AvailableRaces {
+			if race.ID == raceID {
+				raceDetails = &race
+				break
+			}
+		}
+
+		if raceDetails == nil {
+			raceDetails = m.createFallbackRace(raceID, count)
+			isFallback = true
+		}
+
+		cursor := "  "
+		if i == m.raceHistoryCursor {
+			cursor = ">"
+		}
+
+		// Display race information
+		gradeIcon := m.getGradeIcon(raceDetails.Grade)
+		nameDisplay := raceDetails.Name
+		if isFallback {
+			nameDisplay += " (Estimated)"
+		}
+
+		history.WriteString(fmt.Sprintf("%s%d. %s %s (%s)\n", cursor, i+1, gradeIcon, nameDisplay, raceDetails.Grade.String()))
+		history.WriteString(fmt.Sprintf("   📏 Distance: %dm | 💰 Prize Pool: $%d\n", raceDetails.Distance, raceDetails.Prize))
+
+		// Show race date if available
+		if !raceDetails.Date.IsZero() {
+			history.WriteString(fmt.Sprintf("   📅 Date: %s\n", raceDetails.Date.Format("Jan 2, 2006")))
+		}
+
+		if count > 1 {
+			history.WriteString(fmt.Sprintf("   🔄 Entered %d times this season\n", count))
+		}
+
+		// Estimate performance based on current horse stats and race requirements
+		performance := m.estimateRacePerformance(raceDetails)
+		performanceIcon := m.getPerformanceIcon(performance)
+		history.WriteString(fmt.Sprintf("   %s Performance: %s\n", performanceIcon, performance))
+
+		// Add earnings estimate
+		earnings := m.estimateEarnings(raceDetails, count)
+		if earnings > 0 {
+			history.WriteString(fmt.Sprintf("   💵 Est. Earnings: $%d\n", earnings))
+		}
+
+		// Add difficulty indicator
+		difficulty := m.getRaceDifficulty(raceDetails)
+		history.WriteString(fmt.Sprintf("   🎯 Difficulty: %s\n", difficulty))
+
+		if i < viewEnd-1 {
+			history.WriteString("\n")
+		}
+	}
+
+	// Show scroll indicators
+	if len(raceList) > m.maxRacesVisible {
+		history.WriteString("\n\n")
+		scrollInfo := fmt.Sprintf("Race %d of %d", m.raceHistoryCursor+1, len(raceList))
+		if m.raceHistoryStart > 0 {
+			scrollInfo += " ←"
+		}
+		if viewEnd < len(raceList) {
+			scrollInfo += " →"
+		}
+		scrollInfo += " (use ←→/h/l to navigate races)"
+		history.WriteString(scrollInfo)
+	}
+
+	// Add season summary at the bottom
+	if m.raceHistoryCursor == len(raceList)-1 || len(raceList) <= m.maxRacesVisible {
+		history.WriteString("\n\n")
+		horse := m.gameState.PlayerHorse
+		winRate := 0.0
+		if horse.Races > 0 {
+			winRate = float64(horse.Wins) / float64(horse.Races) * 100
+		}
+
+		history.WriteString("📊 Season Racing Summary:\n")
+		history.WriteString(fmt.Sprintf("• Total Race Entries: %d\n", len(season.CompletedRaces)))
+		history.WriteString(fmt.Sprintf("• Unique Races Competed: %d\n", len(uniqueRaces)))
+		history.WriteString(fmt.Sprintf("• Career Record: %d wins in %d races (%.1f%%)", horse.Wins, horse.Races, winRate))
+	}
+
+	return history.String()
+}
+
+func (m *SummaryModel) createFallbackRace(raceID string, entryCount int) *models.Race {
+	// Create a fallback race with estimated details based on game progression
+	horse := m.gameState.PlayerHorse
+	season := m.gameState.Season
+
+	// Estimate race grade based on horse's progression and season
+	var grade models.RaceGrade
+	var raceName string
+	var distance int
+	var prize int
+	var minRating int
+
+	// Use horse's current rating and season to estimate what races they likely entered
+	horseRating := horse.GetOverallRating()
+
+	if horseRating < 50 {
+		grade = models.MaidenRace
+		raceName = "Maiden Stakes"
+		distance = 1600
+		prize = 5000
+		minRating = 0
+	} else if horseRating < 120 {
+		grade = models.Grade3
+		raceName = "Provincial Stakes"
+		distance = 1800
+		prize = 15000
+		minRating = 80
+	} else if horseRating < 160 {
+		grade = models.Grade2
+		raceName = "Regional Championship"
+		distance = 2000
+		prize = 30000
+		minRating = 120
+	} else if horseRating < 200 {
+		grade = models.Grade1
+		raceName = "Classic Stakes"
+		distance = 2200
+		prize = 50000
+		minRating = 160
+	} else {
+		grade = models.GradeG1
+		raceName = "Premier Championship"
+		distance = 2400
+		prize = 75000
+		minRating = 200
+	}
+
+	// Add variety based on entry count and season number
+	if entryCount > 2 {
+		raceName += " (Recurring)"
+	}
+	if season.Number > 1 {
+		raceName = fmt.Sprintf("Season %d %s", season.Number, raceName)
+	}
+
+	// Create the fallback race
+	return &models.Race{
+		ID:          raceID,
+		Name:        raceName,
+		Distance:    distance,
+		Grade:       grade,
+		Prize:       prize,
+		MinRating:   minRating,
+		MaxEntrants: 16,
+		Date:        season.SeasonStartDate.AddDate(0, 0, (season.CurrentWeek-1)*7),
+		Entrants:    []string{},
+	}
 }

@@ -19,7 +19,7 @@ type MainMenuModel struct {
 }
 
 func NewMainMenuModel(gameState *models.GameState, gameVersion string) MainMenuModel {
-	choices := []string{"Scout Horse", "Train", "Race", "Supporters", "Season Summary", "Save & Quit"}
+	choices := []string{"Scout Horse", "Train", "Race", "Supporters", "Horse Spa", "Season Summary", "Save & Quit"}
 	if gameState.PlayerHorse == nil {
 		choices = []string{"Scout Horse", "Supporters", "Save & Quit"}
 	}
@@ -157,6 +157,7 @@ const (
 	TrainView
 	RaceView
 	SupportersView
+	SpaView
 	SummaryView
 	InfoView
 )
