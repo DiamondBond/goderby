@@ -1,4 +1,4 @@
-# Derby Go!
+# Go! Derby
 
 🏇 A terminal-based horse racing life simulation game inspired by Umamusume: Pretty Derby, built with Go and Bubble Tea.
 
@@ -101,4 +101,4 @@ goderby/
 
 ---
 
-🎮 **Enjoy racing to victory in Derby Go!!** 🏆
+🎮 **Enjoy racing to victory in Go! Derby!** 🏆

@@ -37,7 +37,7 @@ go test ./cmd -v
 
 ## Architecture Overview
 
-Derby Go! is a terminal-based horse racing simulation game built with Go and Bubble Tea TUI framework. The architecture follows clean separation of concerns:
+Go! Derby is a terminal-based horse racing simulation game built with Go and Bubble Tea TUI framework. The architecture follows clean separation of concerns:
 
 ### Core Structure
 

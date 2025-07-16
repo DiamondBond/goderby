@@ -70,7 +70,7 @@ func (m MainMenuModel) View() string {
 	var b strings.Builder
 
 	// Title
-	b.WriteString(RenderTitle("Derby Go! " + m.gameVersion))
+	b.WriteString(RenderTitle("Go! Derby " + m.gameVersion))
 	b.WriteString("\n\n")
 
 	// Player horse info if available

@@ -1,4 +1,4 @@
-# Derby Go! Expansion: Endgame & Social Features
+# Go! Derby Expansion: Endgame & Social Features
 
 **Version:** 1.0  
 **Date:** July 16, 2025
@@ -7,7 +7,7 @@
 
 ## 1. Overview
 
-This PRD defines the expansion of Derby Go!’s gameplay loop to include a richer endgame experience and enhanced social sharing mechanics. The goal is to improve player retention by adding depth to horse progression, retirement mechanics, and social sharing of achievements.
+This PRD defines the expansion of Go! Derby’s gameplay loop to include a richer endgame experience and enhanced social sharing mechanics. The goal is to improve player retention by adding depth to horse progression, retirement mechanics, and social sharing of achievements.
 
 ---
 

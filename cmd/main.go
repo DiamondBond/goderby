@@ -138,11 +138,11 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *AppModel) View() string {
 	if !m.initialized {
-		return ui.RenderTitle("Loading Derby Go! "+GameVersion+"...") + "\n\n" + ui.RenderInfo("Loading game data...")
+		return ui.RenderTitle("Loading Go! Derby "+GameVersion+"...") + "\n\n" + ui.RenderInfo("Loading game data...")
 	}
 
 	if m.quitting {
-		return ui.RenderTitle("Thanks for playing Derby Go! "+GameVersion+"!") + "\n\n" + ui.RenderInfo("Game saved successfully. See you next time!")
+		return ui.RenderTitle("Thanks for playing Go! Derby "+GameVersion+"!") + "\n\n" + ui.RenderInfo("Game saved successfully. See you next time!")
 	}
 
 	switch m.currentView {
