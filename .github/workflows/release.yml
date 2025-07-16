@@ -7,6 +7,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - uses: actions/checkout@v4
     
@@ -19,17 +21,17 @@ jobs:
       run: GOOS=windows GOARCH=amd64 go build -o goderby.exe cmd/main.go
     
     - name: Build for macOS
-      run: GOOS=darwin GOARCH=amd64 go build -o goderby cmd/main.go
+      run: GOOS=darwin GOARCH=amd64 go build -o goderby-darwin-amd64 cmd/main.go
     
     - name: Build for Linux
-      run: GOOS=linux GOARCH=amd64 go build -o goderby cmd/main.go
+      run: GOOS=linux GOARCH=amd64 go build -o goderby-linux-amd64 cmd/main.go
     
     - name: Upload release assets
       uses: softprops/action-gh-release@v1
       with:
         files: |
           goderby.exe
-          goderby
-          goderby
+          goderby-darwin-amd64
+          goderby-linux-amd64
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
