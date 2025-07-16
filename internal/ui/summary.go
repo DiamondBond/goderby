@@ -188,9 +188,9 @@ func (m SummaryModel) renderSeasonSummaryView() string {
 	// Social sharing options
 	b.WriteString(RenderHeader("📱 Social Sharing"))
 	b.WriteString("\n")
-	b.WriteString(RenderButton("Create Shareable Profile Card (p)", false))
-	b.WriteString("  ")
-	b.WriteString(RenderButton("Create Season Summary Card (s)", false))
+	b.WriteString(RenderButton("Create Shareable Profile Card (p)", true))
+	b.WriteString("\n")
+	b.WriteString(RenderButton("Create Season Summary Card (s)", true))
 	b.WriteString("\n\n")
 
 	// Retired horses gallery link
