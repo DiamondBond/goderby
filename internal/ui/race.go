@@ -23,6 +23,13 @@ type RaceModel struct {
 	liveProgress      []models.RaceProgressUpdate
 	currentTurn       int
 	acquiredSupporter *models.Supporter
+	// Interactive racing controls
+	playerLane       int  // Current lane (0-4, left to right)
+	raceStamina      int  // Current race stamina (separate from training fatigue)
+	whipUses         int  // Times whip has been used this race
+	obedienceCounter int  // Counter for disobedience effect
+	isDisobedient    bool // Whether horse is currently disobedient
+	lastWhipTurn     int  // Last turn whip was used
 }
 
 type RaceMode int
@@ -54,7 +61,13 @@ func NewRaceModel(gameState *models.GameState, races []models.Race) RaceModel {
 			Formation: models.Draft,
 			Pace:      models.Even,
 		},
-		mode: SelectingRace,
+		mode:             SelectingRace,
+		playerLane:       2,   // Start in middle lane
+		raceStamina:      100, // Start with full race stamina
+		whipUses:         0,
+		obedienceCounter: 0,
+		isDisobedient:    false,
+		lastWhipTurn:     0,
 	}
 }
 
@@ -131,6 +144,11 @@ func (m RaceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case models.Conserve:
 					m.selectedStrat.Pace = models.Even
 				}
+			} else if m.mode == Racing {
+				// Move left during race
+				if m.playerLane > 0 && !m.isDisobedient {
+					m.playerLane--
+				}
 			}
 		case "right", "l":
 			if m.mode == SettingStrategy {
@@ -142,6 +160,11 @@ func (m RaceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedStrat.Pace = models.Conserve
 				case models.Conserve:
 					m.selectedStrat.Pace = models.Fast
+				}
+			} else if m.mode == Racing {
+				// Move right during race
+				if m.playerLane < 4 && !m.isDisobedient {
+					m.playerLane++
 				}
 			}
 		case "enter", " ":
@@ -157,14 +180,37 @@ func (m RaceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case ViewingResult:
 				// Apply race result and return to main menu
 				return m.completeRace()
+			case Racing:
+				// Whip during race
+				return m.useWhip()
+			}
+		case "w":
+			if m.mode == Racing {
+				// Alternative whip key
+				return m.useWhip()
 			}
 		}
 	case RaceTickMsg:
 		if m.mode == Racing {
 			if m.currentTurn < len(m.liveProgress) {
 				m.currentTurn++
+
+				// Apply interactive modifiers to current turn if applicable
+				m.applyInteractiveModifiers()
+
+				// Update obedience state
+				m.updateObedience()
+
+				// Regenerate stamina slowly
+				if m.raceStamina < 100 {
+					m.raceStamina += 2
+					if m.raceStamina > 100 {
+						m.raceStamina = 100
+					}
+				}
+
 				if m.currentTurn < len(m.liveProgress) {
-					return m, tea.Tick(time.Millisecond*500, func(t time.Time) tea.Msg {
+					return m, tea.Tick(time.Millisecond*1500, func(t time.Time) tea.Msg {
 						return RaceTickMsg{}
 					})
 				} else {
@@ -320,6 +366,10 @@ func (m RaceModel) renderRaceView() string {
 	b.WriteString(RenderHeader(fmt.Sprintf("%s - Turn %d", race.Name, m.currentTurn)))
 	b.WriteString("\n\n")
 
+	// Player controls and status
+	b.WriteString(m.renderPlayerStatus())
+	b.WriteString("\n")
+
 	if m.currentTurn < len(m.liveProgress) {
 		progress := m.liveProgress[m.currentTurn]
 
@@ -347,6 +397,9 @@ func (m RaceModel) renderRaceView() string {
 			b.WriteString("\n")
 		}
 	}
+
+	// Controls help
+	b.WriteString(m.renderControlsHelp())
 
 	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
 }
@@ -433,8 +486,9 @@ func (m RaceModel) renderAnimatedRaceTrack(progress models.RaceProgressUpdate, r
 		// Use different sprite based on horse index for variety
 		spriteIndex := i % len(horseSprites)
 		if isPlayerHorse {
-			// Player horse is always the unicorn for special visibility
-			horseSprite = "🦄⭐"
+			// Player horse shows lane position
+			laneMarker := fmt.Sprintf("L%d", m.playerLane+1)
+			horseSprite = "🦄" + laneMarker
 		} else {
 			horseSprite = horseSprites[spriteIndex]
 		}
@@ -639,6 +693,14 @@ func (m RaceModel) startRace() (RaceModel, tea.Cmd) {
 	// Reset acquired supporter for new race
 	m.acquiredSupporter = nil
 
+	// Reset interactive racing controls
+	m.playerLane = 2    // Start in middle lane
+	m.raceStamina = 100 // Full stamina at start
+	m.whipUses = 0
+	m.obedienceCounter = 0
+	m.isDisobedient = false
+	m.lastWhipTurn = 0
+
 	race := m.races[m.selectedRace]
 
 	// Add player horse to race
@@ -664,7 +726,7 @@ func (m RaceModel) startRace() (RaceModel, tea.Cmd) {
 	m.currentTurn = 0
 	m.mode = Racing
 
-	return m, tea.Tick(time.Millisecond*500, func(t time.Time) tea.Msg {
+	return m, tea.Tick(time.Millisecond*1500, func(t time.Time) tea.Msg {
 		return RaceTickMsg{}
 	})
 }
@@ -819,6 +881,249 @@ func (m RaceModel) generateAIHorse(race models.Race) *models.Horse {
 	}
 
 	return aiHorse
+}
+
+func (m *RaceModel) useWhip() (RaceModel, tea.Cmd) {
+	// Can't whip if disobedient or too soon after last whip
+	if m.isDisobedient || m.currentTurn-m.lastWhipTurn < 3 {
+		return *m, nil
+	}
+
+	// Check if enough stamina to whip
+	staminaCost := 25
+	if m.raceStamina < staminaCost {
+		return *m, nil
+	}
+
+	// Use whip - consume stamina and track usage
+	m.raceStamina -= staminaCost
+	m.whipUses++
+	m.lastWhipTurn = m.currentTurn
+
+	// Check for disobedience based on whip uses
+	// More whips = higher chance of disobedience
+	disobedienceChance := float64(m.whipUses) * 0.15 // 15% per whip use
+	if rand.Float64() < disobedienceChance {
+		m.isDisobedient = true
+		m.obedienceCounter = 5 // Disobedient for 5 turns
+	}
+
+	return *m, nil
+}
+
+func (m *RaceModel) updateObedience() {
+	if m.isDisobedient {
+		m.obedienceCounter--
+		if m.obedienceCounter <= 0 {
+			m.isDisobedient = false
+		}
+	}
+}
+
+func (m *RaceModel) applyInteractiveModifiers() {
+	if m.currentTurn >= len(m.liveProgress) || m.result == nil {
+		return
+	}
+
+	// Get current progress
+	progress := &m.liveProgress[m.currentTurn]
+	playerHorseID := m.gameState.PlayerHorse.ID
+
+	// Apply whip boost to distance
+	if m.lastWhipTurn > 0 && m.currentTurn-m.lastWhipTurn <= 2 {
+		// Whip boost: increase distance by a percentage
+		currentDistance := progress.Distances[playerHorseID]
+		whipBoost := int(float64(currentDistance) * 0.1) // 10% boost to current distance
+		progress.Distances[playerHorseID] = currentDistance + whipBoost
+
+		// Add whip boost event
+		if m.currentTurn-m.lastWhipTurn == 1 {
+			progress.Events = append(progress.Events, "💨 Your horse surges forward from the whip!")
+		}
+	}
+
+	// Apply lane effects to distance based on race position (turns vs straights)
+	lane := m.playerLane
+	currentDistance := progress.Distances[playerHorseID]
+
+	// Calculate if we're in a turn section
+	numTurns := len(m.liveProgress)
+	raceProgress := float64(m.currentTurn) / float64(numTurns)
+	isInTurn := (raceProgress >= 0.0 && raceProgress <= 0.25) || (raceProgress >= 0.75 && raceProgress <= 1.0)
+
+	var laneBonus int
+	if isInTurn {
+		// During turns, inner lanes get advantage
+		switch lane {
+		case 0: // Inner rail - best advantage in turns
+			laneBonus = 5
+		case 1: // Second lane - good advantage in turns
+			laneBonus = 3
+		case 2: // Middle lane - neutral in turns
+			laneBonus = 0
+		case 3: // Outer middle - slight disadvantage in turns
+			laneBonus = -2
+		case 4: // Outside lane - significant disadvantage in turns
+			laneBonus = -4
+		}
+	} else {
+		// On straights, middle lanes are optimal
+		switch lane {
+		case 0, 4: // Outside lanes - slight disadvantage on straights
+			laneBonus = -2
+		case 1, 3: // Good lanes on straights
+			laneBonus = 0
+		case 2: // Perfect middle lane on straights
+			laneBonus = 3
+		}
+	}
+
+	progress.Distances[playerHorseID] = currentDistance + laneBonus
+
+	// Add turn advantage events for visual feedback
+	if isInTurn && laneBonus > 0 {
+		progress.Events = append(progress.Events, fmt.Sprintf("🏃 Inner lane advantage! +%d speed in the turn!", laneBonus))
+	} else if isInTurn && laneBonus < 0 {
+		progress.Events = append(progress.Events, fmt.Sprintf("🐌 Outside lane disadvantage! %d speed in the turn", laneBonus))
+	}
+
+	// Apply disobedience penalty
+	if m.isDisobedient {
+		currentDistance = progress.Distances[playerHorseID]
+		penalty := int(float64(currentDistance) * 0.15) // 15% penalty
+		progress.Distances[playerHorseID] = currentDistance - penalty
+
+		// Add disobedience event
+		if m.obedienceCounter == 5 { // First turn of disobedience
+			progress.Events = append(progress.Events, "🚫 Your horse is fighting your commands!")
+		}
+	}
+
+	// Recalculate positions after distance changes
+	m.recalculatePositions(progress)
+}
+
+func (m *RaceModel) recalculatePositions(progress *models.RaceProgressUpdate) {
+	// Create slice of horse IDs sorted by distance (descending)
+	type HorseDistance struct {
+		HorseID  string
+		Distance int
+	}
+
+	var horses []HorseDistance
+	for horseID, distance := range progress.Distances {
+		horses = append(horses, HorseDistance{
+			HorseID:  horseID,
+			Distance: distance,
+		})
+	}
+
+	// Sort by distance (highest first)
+	for i := 0; i < len(horses)-1; i++ {
+		for j := i + 1; j < len(horses); j++ {
+			if horses[i].Distance < horses[j].Distance {
+				horses[i], horses[j] = horses[j], horses[i]
+			}
+		}
+	}
+
+	// Update positions
+	for i, horse := range horses {
+		progress.Positions[horse.HorseID] = i + 1
+	}
+}
+
+func (m RaceModel) renderPlayerStatus() string {
+	// Lane indicators
+	laneDisplay := ""
+	for i := 0; i < 5; i++ {
+		if i == m.playerLane {
+			laneDisplay += "[🦄]"
+		} else {
+			laneDisplay += "[ ]"
+		}
+		if i < 4 {
+			laneDisplay += " "
+		}
+	}
+
+	// Stamina bar
+	staminaBar := ""
+	staminaBars := m.raceStamina / 5 // 20 bars max
+	for i := 0; i < 20; i++ {
+		if i < staminaBars {
+			staminaBar += "█"
+		} else {
+			staminaBar += "▁"
+		}
+	}
+
+	statusInfo := fmt.Sprintf("Lane Position: %s\n", laneDisplay)
+	statusInfo += fmt.Sprintf("Stamina: %s %d/100\n", staminaBar, m.raceStamina)
+	statusInfo += fmt.Sprintf("Whip Uses: %d", m.whipUses)
+
+	if m.isDisobedient {
+		statusInfo += fmt.Sprintf("\n🚫 DISOBEDIENT (%d turns)", m.obedienceCounter)
+	}
+
+	// Style the status box
+	statusStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#FFD700")).
+		Padding(0, 1).
+		Width(60)
+
+	return statusStyle.Render(statusInfo)
+}
+
+func (m RaceModel) renderControlsHelp() string {
+	// Calculate if we're in a turn section for strategic guidance
+	numTurns := len(m.liveProgress)
+	raceProgress := float64(m.currentTurn) / float64(numTurns)
+	isInTurn := (raceProgress >= 0.0 && raceProgress <= 0.25) || (raceProgress >= 0.75 && raceProgress <= 1.0)
+
+	var controlsText string
+	if isInTurn {
+		controlsText = "🎮 IN TURN: Inner lanes (←) give speed advantage! | Enter/W Whip horse | Too much whipping = disobedience!"
+	} else {
+		controlsText = "🎮 Controls: ←/→ Switch lanes | Enter/W Whip horse (+speed, -stamina) | Middle lanes best on straights!"
+	}
+
+	if m.isDisobedient {
+		controlsText = "🚫 Horse is disobedient! Controls disabled temporarily."
+	} else if m.raceStamina < 25 {
+		controlsText = "⚠️  Low stamina! Can't use whip until stamina recovers."
+	} else if m.currentTurn-m.lastWhipTurn < 3 && m.lastWhipTurn > 0 {
+		cooldown := 3 - (m.currentTurn - m.lastWhipTurn)
+		controlsText = fmt.Sprintf("⏳ Whip cooldown: %d turns", cooldown)
+	}
+
+	return RenderHelp(controlsText)
+}
+
+// Interface methods for InteractiveRaceModel
+func (m RaceModel) GetPlayerLane() int {
+	return m.playerLane
+}
+
+func (m RaceModel) GetRaceStamina() int {
+	return m.raceStamina
+}
+
+func (m RaceModel) GetWhipUses() int {
+	return m.whipUses
+}
+
+func (m RaceModel) IsDisobedient() bool {
+	return m.isDisobedient
+}
+
+func (m RaceModel) GetLastWhipTurn() int {
+	return m.lastWhipTurn
+}
+
+func (m RaceModel) GetCurrentTurn() int {
+	return m.currentTurn
 }
 
 func getOrdinalSuffix(n int) string {
