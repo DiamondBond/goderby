@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	// Uma Musume inspired color palette - inverted to purple/pink theme with green selections!
+	// Uma Musume inspired color palette
 	primaryColor   = lipgloss.Color("#DDA0DD") // Light plum for passive UI elements
 	secondaryColor = lipgloss.Color("#FFB6C1") // Soft pink for backgrounds
 	accentColor    = lipgloss.Color("#7ED321") // Bright lime green for selected items/highlights

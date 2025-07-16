@@ -21,7 +21,6 @@ type RaceModel struct {
 	result        *models.RaceResult
 	liveProgress  []models.RaceProgressUpdate
 	currentTurn   int
-	animating     bool
 }
 
 type RaceMode int

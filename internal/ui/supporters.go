@@ -84,7 +84,7 @@ func (m SupportersModel) View() string {
 		BorderForeground(lipgloss.Color("#DDA0DD")).
 		Foreground(lipgloss.Color("#FFFFFF"))
 
-	activeTabStyle := tabStyle.Copy().
+	activeTabStyle := tabStyle.
 		BorderForeground(lipgloss.Color("#7ED321")).
 		Background(lipgloss.Color("#7ED321")).
 		Foreground(lipgloss.Color("#FFFFFF"))
