@@ -68,6 +68,10 @@ go build -o goderby cmd/main.go
 ./goderby
 ```
 
+## Windows Terminal
+
+If you are using Windows 10, please install [Windows Terminal](https://apps.microsoft.com/detail/9n0dx20hk701).
+
 ## Technical Details
 
 - Built with Go 1.24.5+
