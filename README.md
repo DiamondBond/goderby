@@ -12,23 +12,6 @@
 - **Save/Load**: Persistent game state with JSON saves
 - **Beautiful TUI**: Elegant purple/pink themed terminal interface with green selections, Unicode icons and animated progress bars
 
-## Installation
-
-```bash
-cd goderby
-# Build using Go directly
-go build -o goderby cmd/main.go
-
-# Or use the build script (Linux/macOS)
-./build.sh
-
-# Or for Windows
-./build_windows.sh
-
-# Run the game
-./goderby
-```
-
 ## How to Play
 
 1. **Scout a Horse**: Choose your racing partner from available horses
@@ -64,6 +47,23 @@ go build -o goderby cmd/main.go
 - **r**: Rest (in training mode)
 - **i**: Inspect (in scout mode)
 - **n**: Next week/season
+
+## Installation
+
+```bash
+cd goderby
+# Build using Go directly
+go build -o goderby cmd/main.go
+
+# Or use the build script (Linux/macOS)
+./build.sh
+
+# Or for Windows
+./build_windows.sh
+
+# Run the game
+./goderby
+```
 
 ## Technical Details
 

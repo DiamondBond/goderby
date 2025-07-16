@@ -55,6 +55,10 @@ func (m MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, func() tea.Msg {
 				return MenuSelectionMsg{Choice: m.choices[m.cursor]}
 			}
+		case "i":
+			return m, func() tea.Msg {
+				return NavigationMsg{State: InfoView}
+			}
 		}
 	}
 
@@ -113,7 +117,7 @@ func (m MainMenuModel) View() string {
 
 	// Help
 	b.WriteString("\n")
-	b.WriteString(RenderHelp("Use ↑/↓ to navigate, Enter to select, q to quit"))
+	b.WriteString(RenderHelp("Use ↑/↓ to navigate, Enter to select, q to quit, i for info"))
 
 	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
 }
@@ -132,6 +136,7 @@ const (
 	RaceView
 	SupportersView
 	SummaryView
+	InfoView
 )
 
 type NavigationMsg struct {
