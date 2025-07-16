@@ -17,6 +17,8 @@ type SpaModel struct {
 	mode           SpaMode
 	animation      SpaAnimation
 	lastResult     *SpaResult
+	viewStart      int // For scrolling
+	maxVisible     int // Maximum services visible at once
 }
 
 type SpaMode int
@@ -136,6 +138,8 @@ func NewSpaModel(gameState *models.GameState) SpaModel {
 		spaServices:    services,
 		mode:           SelectingService,
 		animation:      SpaAnimation{},
+		viewStart:      0,
+		maxVisible:     3, // Show 3 services at a time
 	}
 }
 
@@ -156,10 +160,18 @@ func (m SpaModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "up", "k":
 				if m.selectedOption > 0 {
 					m.selectedOption--
+					// Adjust view if cursor goes above visible area
+					if m.selectedOption < m.viewStart {
+						m.viewStart = m.selectedOption
+					}
 				}
 			case "down", "j":
 				if m.selectedOption < len(m.spaServices)-1 {
 					m.selectedOption++
+					// Adjust view if cursor goes below visible area
+					if m.selectedOption >= m.viewStart+m.maxVisible {
+						m.viewStart = m.selectedOption - m.maxVisible + 1
+					}
 				}
 			case "enter", " ":
 				return m.purchaseSpaService()
@@ -283,7 +295,14 @@ func (m SpaModel) View() string {
 		b.WriteString(RenderHeader("Available Services"))
 		b.WriteString("\n")
 
-		for i, service := range m.spaServices {
+		// Service list with scrolling
+		viewEnd := m.viewStart + m.maxVisible
+		if viewEnd > len(m.spaServices) {
+			viewEnd = len(m.spaServices)
+		}
+
+		for i := m.viewStart; i < viewEnd; i++ {
+			service := m.spaServices[i]
 			cursor := " "
 			if m.selectedOption == i {
 				cursor = ">"
@@ -310,10 +329,26 @@ func (m SpaModel) View() string {
 					b.WriteString(cardStyle.Render(serviceInfo))
 				}
 			}
-			b.WriteString("\n")
+			if i < viewEnd-1 {
+				b.WriteString("\n")
+			}
 		}
 
-		b.WriteString("\n")
+		// Show scroll indicators
+		if len(m.spaServices) > m.maxVisible {
+			b.WriteString("\n\n")
+			scrollInfo := fmt.Sprintf("Showing %d-%d of %d services",
+				m.viewStart+1, viewEnd, len(m.spaServices))
+			if m.viewStart > 0 {
+				scrollInfo += " ↑"
+			}
+			if viewEnd < len(m.spaServices) {
+				scrollInfo += " ↓"
+			}
+			b.WriteString(RenderInfo(scrollInfo))
+		}
+
+		b.WriteString("\n\n")
 		b.WriteString(RenderHelp("Use ↑/↓ to navigate, Enter to purchase, q/esc to return"))
 
 	case ViewingAnimation:
