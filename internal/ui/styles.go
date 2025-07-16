@@ -115,12 +115,14 @@ var (
 
 	shareableHeaderStyle = lipgloss.NewStyle().
 				Foreground(primaryColor).
+				Background(lipgloss.Color("#1a1a2e")).
 				Bold(true).
 				Align(lipgloss.Center).
 				Width(74)
 
 	shareableSubHeaderStyle = lipgloss.NewStyle().
 				Foreground(accentColor).
+				Background(lipgloss.Color("#1a1a2e")).
 				Bold(true).
 				Align(lipgloss.Center).
 				Width(74)
