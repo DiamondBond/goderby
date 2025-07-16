@@ -12,7 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const GameVersion = "v1.1"
+const GameVersion = "v1.2"
 
 type AppModel struct {
 	currentView ui.ViewState
@@ -26,6 +26,7 @@ type AppModel struct {
 	race       ui.RaceModel
 	supporters ui.SupportersModel
 	summary    ui.SummaryModel
+	info       ui.InfoModel
 
 	// Data
 	availableHorses     []models.Horse
@@ -116,6 +117,10 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var model tea.Model
 		model, cmd = m.summary.Update(msg)
 		m.summary = model.(ui.SummaryModel)
+	case ui.InfoView:
+		var model tea.Model
+		model, cmd = m.info.Update(msg)
+		m.info = model.(ui.InfoModel)
 	}
 
 	return m, cmd
@@ -143,6 +148,8 @@ func (m *AppModel) View() string {
 		return m.supporters.View()
 	case ui.SummaryView:
 		return m.summary.View()
+	case ui.InfoView:
+		return m.info.View()
 	default:
 		return m.mainMenu.View()
 	}
@@ -190,6 +197,7 @@ func (m *AppModel) initializeData() (*AppModel, tea.Cmd) {
 	m.train = ui.NewTrainModel(m.gameState)
 	m.race = ui.NewRaceModel(m.gameState, m.availableRaces)
 	m.summary = ui.NewSummaryModel(m.gameState)
+	m.info = ui.NewInfoModel(GameVersion)
 
 	m.initialized = true
 
@@ -213,6 +221,8 @@ func (m *AppModel) handleNavigation(msg ui.NavigationMsg) (*AppModel, tea.Cmd) {
 		m.supporters = ui.NewSupportersModel(m.gameState)
 	case ui.SummaryView:
 		m.summary = ui.NewSummaryModel(m.gameState)
+	case ui.InfoView:
+		m.info = ui.NewInfoModel(GameVersion)
 	}
 
 	return m, nil
