@@ -534,8 +534,16 @@ func (m RaceModel) renderAnimatedRaceTrack(progress models.RaceProgressUpdate, r
 		trackLine += spaces + horseSprite
 
 		// Fill remaining space and close track
-		// Calculate actual sprite width for proper alignment
-		spriteWidth := len(horseSprite)
+		// Calculate actual sprite display width for proper alignment
+		// Count Unicode runes instead of bytes for proper width calculation
+		spriteWidth := 0
+		for _, r := range horseSprite {
+			if r == '💨' {
+				spriteWidth += 2 // Smoke emoji takes 2 character widths
+			} else {
+				spriteWidth += 1 // Most other characters take 1 character width
+			}
+		}
 		remainingSpace := trackWidth - len(spaces) - spriteWidth - 6 // 6 for start marker
 		if remainingSpace > 0 {
 			trackLine += strings.Repeat(" ", remainingSpace)
