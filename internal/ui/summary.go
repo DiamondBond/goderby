@@ -54,7 +54,7 @@ func NewSummaryModel(gameState *models.GameState) *SummaryModel {
 		sections:          []SummarySection{},
 		raceHistoryCursor: 0,
 		raceHistoryStart:  0,
-		maxRacesVisible:   3, // Show 3 races at a time in race history
+		maxRacesVisible:   1, // Show 1 race at a time in race history
 	}
 	model.buildSections()
 	return model
@@ -108,8 +108,7 @@ func (m *SummaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "right", "l":
 			// Handle horizontal scrolling in race history section
 			if m.isRaceHistorySelected() {
-				uniqueRaces := m.getUniqueRaces()
-				if m.raceHistoryCursor < len(uniqueRaces)-1 {
+				if m.raceHistoryCursor < len(m.gameState.Season.CompletedRaces)-1 {
 					m.raceHistoryCursor++
 					if m.raceHistoryCursor >= m.raceHistoryStart+m.maxRacesVisible {
 						m.raceHistoryStart = m.raceHistoryCursor - m.maxRacesVisible + 1
@@ -1017,6 +1016,11 @@ func (m *SummaryModel) buildSections() {
 	// Clear existing sections
 	m.sections = []SummarySection{}
 
+	// If no horse selected, return early with empty sections
+	if horse == nil {
+		return
+	}
+
 	// Horse Progress Section
 	progressInfo := fmt.Sprintf("Age: %d years old\n", horse.Age)
 	progressInfo += fmt.Sprintf("Overall Rating: %d\n", horse.GetOverallRating())
@@ -1169,8 +1173,7 @@ func (m *SummaryModel) getUniqueRaces() map[string]int {
 func (m *SummaryModel) getRaceHistoryScrollable(season models.Season) string {
 	var history strings.Builder
 
-	uniqueRaces := m.getUniqueRaces()
-	if len(uniqueRaces) == 0 {
+	if len(season.CompletedRaces) == 0 {
 		history.WriteString("No races completed this season yet.\n")
 		history.WriteString("Visit the Race menu to enter your first race!")
 		return history.String()
@@ -1178,27 +1181,9 @@ func (m *SummaryModel) getRaceHistoryScrollable(season models.Season) string {
 
 	history.WriteString(fmt.Sprintf("🏁 Season %d Race History (%d races):\n\n", season.Number, len(season.CompletedRaces)))
 
-	// Convert map to ordered slice for consistent display
-	type raceEntry struct {
-		id    string
-		count int
-	}
-	var raceList []raceEntry
-	for raceID, count := range uniqueRaces {
-		raceList = append(raceList, raceEntry{id: raceID, count: count})
-	}
-
-	// Calculate visible window for races
-	viewEnd := m.raceHistoryStart + m.maxRacesVisible
-	if viewEnd > len(raceList) {
-		viewEnd = len(raceList)
-	}
-
-	// Show only visible races
-	for i := m.raceHistoryStart; i < viewEnd; i++ {
-		entry := raceList[i]
-		raceID := entry.id
-		count := entry.count
+	// Show only one race at a time based on cursor position
+	if m.raceHistoryCursor < len(season.CompletedRaces) {
+		raceID := season.CompletedRaces[m.raceHistoryCursor]
 
 		// Find race details
 		var raceDetails *models.Race
@@ -1211,13 +1196,9 @@ func (m *SummaryModel) getRaceHistoryScrollable(season models.Season) string {
 		}
 
 		if raceDetails == nil {
-			raceDetails = m.createFallbackRace(raceID, count)
+			// For fallback, just pass 1 as count since we're showing individual entries
+			raceDetails = m.createFallbackRace(raceID, 1)
 			isFallback = true
-		}
-
-		cursor := "  "
-		if i == m.raceHistoryCursor {
-			cursor = ">"
 		}
 
 		// Display race information
@@ -1227,7 +1208,7 @@ func (m *SummaryModel) getRaceHistoryScrollable(season models.Season) string {
 			nameDisplay += " (Estimated)"
 		}
 
-		history.WriteString(fmt.Sprintf("%s%d. %s %s (%s)\n", cursor, i+1, gradeIcon, nameDisplay, raceDetails.Grade.String()))
+		history.WriteString(fmt.Sprintf("%d. %s %s (%s)\n", m.raceHistoryCursor+1, gradeIcon, nameDisplay, raceDetails.Grade.String()))
 		history.WriteString(fmt.Sprintf("   📏 Distance: %dm | 💰 Prize Pool: $%d\n", raceDetails.Distance, raceDetails.Prize))
 
 		// Show race date if available
@@ -1235,17 +1216,13 @@ func (m *SummaryModel) getRaceHistoryScrollable(season models.Season) string {
 			history.WriteString(fmt.Sprintf("   📅 Date: %s\n", raceDetails.Date.Format("Jan 2, 2006")))
 		}
 
-		if count > 1 {
-			history.WriteString(fmt.Sprintf("   🔄 Entered %d times this season\n", count))
-		}
-
 		// Estimate performance based on current horse stats and race requirements
 		performance := m.estimateRacePerformance(raceDetails)
 		performanceIcon := m.getPerformanceIcon(performance)
 		history.WriteString(fmt.Sprintf("   %s Performance: %s\n", performanceIcon, performance))
 
-		// Add earnings estimate
-		earnings := m.estimateEarnings(raceDetails, count)
+		// Add earnings estimate (for single race entry)
+		earnings := m.estimateEarnings(raceDetails, 1)
 		if earnings > 0 {
 			history.WriteString(fmt.Sprintf("   💵 Est. Earnings: $%d\n", earnings))
 		}
@@ -1253,20 +1230,16 @@ func (m *SummaryModel) getRaceHistoryScrollable(season models.Season) string {
 		// Add difficulty indicator
 		difficulty := m.getRaceDifficulty(raceDetails)
 		history.WriteString(fmt.Sprintf("   🎯 Difficulty: %s\n", difficulty))
-
-		if i < viewEnd-1 {
-			history.WriteString("\n")
-		}
 	}
 
 	// Show scroll indicators
-	if len(raceList) > m.maxRacesVisible {
+	if len(season.CompletedRaces) > 1 {
 		history.WriteString("\n\n")
-		scrollInfo := fmt.Sprintf("Race %d of %d", m.raceHistoryCursor+1, len(raceList))
-		if m.raceHistoryStart > 0 {
+		scrollInfo := fmt.Sprintf("Race %d of %d", m.raceHistoryCursor+1, len(season.CompletedRaces))
+		if m.raceHistoryCursor > 0 {
 			scrollInfo += " ←"
 		}
-		if viewEnd < len(raceList) {
+		if m.raceHistoryCursor < len(season.CompletedRaces)-1 {
 			scrollInfo += " →"
 		}
 		scrollInfo += " (use ←→/h/l to navigate races)"
@@ -1274,13 +1247,16 @@ func (m *SummaryModel) getRaceHistoryScrollable(season models.Season) string {
 	}
 
 	// Add season summary at the bottom
-	if m.raceHistoryCursor == len(raceList)-1 || len(raceList) <= m.maxRacesVisible {
+	if m.raceHistoryCursor == len(season.CompletedRaces)-1 || len(season.CompletedRaces) <= 1 {
 		history.WriteString("\n\n")
 		horse := m.gameState.PlayerHorse
 		winRate := 0.0
 		if horse.Races > 0 {
 			winRate = float64(horse.Wins) / float64(horse.Races) * 100
 		}
+
+		// Calculate unique races for summary
+		uniqueRaces := m.getUniqueRaces()
 
 		history.WriteString("📊 Season Racing Summary:\n")
 		history.WriteString(fmt.Sprintf("• Total Race Entries: %d\n", len(season.CompletedRaces)))
