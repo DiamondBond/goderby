@@ -2,10 +2,9 @@ package ui
 
 import (
 	"fmt"
+
 	"github.com/charmbracelet/lipgloss"
 )
-
-const GameVersion = "v1.0"
 
 var (
 	// Uma Musume inspired color palette - inverted to purple/pink theme with green selections!

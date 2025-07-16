@@ -10,23 +10,25 @@ import (
 )
 
 type MainMenuModel struct {
-	choices   []string
-	cursor    int
-	selected  bool
-	gameState *models.GameState
+	choices     []string
+	cursor      int
+	selected    bool
+	gameState   *models.GameState
+	gameVersion string
 }
 
-func NewMainMenuModel(gameState *models.GameState) MainMenuModel {
+func NewMainMenuModel(gameState *models.GameState, gameVersion string) MainMenuModel {
 	choices := []string{"Scout Horse", "Train", "Race", "Supporters", "Season Summary", "Save & Quit"}
 	if gameState.PlayerHorse == nil {
 		choices = []string{"Scout Horse", "Supporters", "Save & Quit"}
 	}
 
 	return MainMenuModel{
-		choices:   choices,
-		cursor:    0,
-		selected:  false,
-		gameState: gameState,
+		choices:     choices,
+		cursor:      0,
+		selected:    false,
+		gameState:   gameState,
+		gameVersion: gameVersion,
 	}
 }
 
@@ -63,7 +65,7 @@ func (m MainMenuModel) View() string {
 	var b strings.Builder
 
 	// Title
-	b.WriteString(RenderTitle("Go Derby " + GameVersion))
+	b.WriteString(RenderTitle("Go Derby " + m.gameVersion))
 	b.WriteString("\n\n")
 
 	// Player horse info if available

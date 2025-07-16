@@ -5,13 +5,14 @@ import (
 	"log"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"goderby/internal/data"
 	"goderby/internal/models"
 	"goderby/internal/ui"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
-const GameVersion = "v1.0"
+const GameVersion = "v1.1"
 
 type AppModel struct {
 	currentView ui.ViewState
@@ -76,7 +77,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ui.HorseSelectedMsg:
 		m.gameState.PlayerHorse = &msg.Horse
-		m.mainMenu = ui.NewMainMenuModel(m.gameState)
+		m.mainMenu = ui.NewMainMenuModel(m.gameState, GameVersion)
 		m.currentView = ui.MainMenuView
 		return m, nil
 
@@ -184,7 +185,7 @@ func (m *AppModel) initializeData() (*AppModel, tea.Cmd) {
 	m.gameState.AvailableRaces = races
 
 	// Initialize view models
-	m.mainMenu = ui.NewMainMenuModel(m.gameState)
+	m.mainMenu = ui.NewMainMenuModel(m.gameState, GameVersion)
 	m.scout = ui.NewScoutModel(m.gameState, m.availableHorses)
 	m.train = ui.NewTrainModel(m.gameState)
 	m.race = ui.NewRaceModel(m.gameState, m.availableRaces)
@@ -201,7 +202,7 @@ func (m *AppModel) handleNavigation(msg ui.NavigationMsg) (*AppModel, tea.Cmd) {
 	// Refresh models when switching views
 	switch msg.State {
 	case ui.MainMenuView:
-		m.mainMenu = ui.NewMainMenuModel(m.gameState)
+		m.mainMenu = ui.NewMainMenuModel(m.gameState, GameVersion)
 	case ui.ScoutView:
 		m.scout = ui.NewScoutModel(m.gameState, m.availableHorses)
 	case ui.TrainView:
