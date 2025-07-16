@@ -94,6 +94,10 @@ func (m RaceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case SettingStrategy, ConfirmingEntry:
 				m.mode = SelectingRace
 				return m, nil
+			case SelectingRace:
+				return m, func() tea.Msg {
+					return NavigationMsg{State: MainMenuView}
+				}
 			default:
 				return m, func() tea.Msg {
 					return NavigationMsg{State: MainMenuView}
@@ -115,6 +119,8 @@ func (m RaceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case models.Mount:
 					m.selectedStrat.Formation = models.Draft
 				}
+			case ViewingResult, ConfirmingEntry, Racing:
+				// No action for these modes
 			}
 		case "down", "j":
 			switch m.mode {
@@ -132,6 +138,8 @@ func (m RaceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case models.Mount:
 					m.selectedStrat.Formation = models.Lead
 				}
+			case ViewingResult, ConfirmingEntry, Racing:
+				// No action for these modes
 			}
 		case "left", "h":
 			if m.mode == SettingStrategy {
@@ -255,6 +263,8 @@ func (m RaceModel) View() string {
 		return m.renderConfirmView()
 	case SettingStrategy:
 		return m.renderStrategyView()
+	case SelectingRace:
+		return m.renderRaceListView()
 	default:
 		return m.renderRaceListView()
 	}
@@ -378,9 +388,9 @@ func (m RaceModel) renderRaceView() string {
 			b.WriteString(m.renderAnimatedRaceTrack(progress, race))
 			b.WriteString("\n")
 
-			// // Current standings
-			// b.WriteString("🏆 Current Standings:\n")
-			// b.WriteString(m.renderRaceStandings(progress))
+			// Current standings
+			b.WriteString("🏆 Current Standings:\n")
+			b.WriteString(m.renderRaceStandings(progress))
 		}
 
 		b.WriteString("\n")
@@ -650,9 +660,9 @@ func (m RaceModel) renderResultView() string {
 
 	// Show acquired supporter if any
 	if m.acquiredSupporter != nil {
-		rewardsInfo += fmt.Sprintf("\n\n🎉 New Supporter Acquired!\n")
+		rewardsInfo += "\n\n🎉 New Supporter Acquired!\n"
 		rewardsInfo += fmt.Sprintf("%s %s\n", m.acquiredSupporter.Rarity.String(), m.acquiredSupporter.Name)
-		rewardsInfo += fmt.Sprintf("📝 %s", m.acquiredSupporter.Description)
+		rewardsInfo += "📝 " + m.acquiredSupporter.Description
 	}
 
 	b.WriteString(cardStyle.Render(rewardsInfo))

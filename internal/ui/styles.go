@@ -20,7 +20,6 @@ var (
 	// Additional Uma Musume colors
 	brightBlue = lipgloss.Color("#00BFFF") // Bright sky blue
 	lavender   = lipgloss.Color("#E6E6FA") // Light lavender
-	peach      = lipgloss.Color("#FFCCCB") // Light peach
 	mint       = lipgloss.Color("#DDA0DD") // Light plum for passive borders
 
 	// Base styles

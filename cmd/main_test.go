@@ -12,8 +12,11 @@ func TestGameInitialization(t *testing.T) {
 	// Test data loader
 	loader := data.NewDataLoader("../assets")
 
+	// Create a new game state for testing
+	gameState := models.NewGameState()
+
 	// Test loading horses
-	horses, err := loader.LoadHorses()
+	horses, err := loader.LoadHorses(gameState)
 	if err != nil {
 		t.Errorf("Failed to load horses: %v", err)
 	}
@@ -25,7 +28,7 @@ func TestGameInitialization(t *testing.T) {
 	fmt.Printf("Loaded %d horses\n", len(horses))
 
 	// Test loading supporters
-	supporters, err := loader.LoadSupporters()
+	supporters, err := loader.LoadSupporters(gameState)
 	if err != nil {
 		t.Errorf("Failed to load supporters: %v", err)
 	}
@@ -37,7 +40,7 @@ func TestGameInitialization(t *testing.T) {
 	fmt.Printf("Loaded %d supporters\n", len(supporters))
 
 	// Test loading races
-	races, err := loader.LoadRaces()
+	races, err := loader.LoadRaces(gameState)
 	if err != nil {
 		t.Errorf("Failed to load races: %v", err)
 	}

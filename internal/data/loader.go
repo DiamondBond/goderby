@@ -19,15 +19,30 @@ func NewDataLoader(assetsPath string) *DataLoader {
 	}
 }
 
-func (dl *DataLoader) LoadHorses() ([]models.Horse, error) {
+func (dl *DataLoader) LoadHorses(gameState *models.GameState) ([]models.Horse, error) {
+	// If game state has saved horses, use them
+	if len(gameState.AvailableHorses) > 0 {
+		return gameState.AvailableHorses, nil
+	}
+	// Otherwise generate new horses for new game
 	return dl.generateDefaultHorses(), nil
 }
 
-func (dl *DataLoader) LoadSupporters() ([]models.Supporter, error) {
+func (dl *DataLoader) LoadSupporters(gameState *models.GameState) ([]models.Supporter, error) {
+	// If game state has saved supporters, use them
+	if len(gameState.Supporters) > 0 {
+		return gameState.Supporters, nil
+	}
+	// Otherwise generate new supporters for new game
 	return dl.generateDefaultSupporters(), nil
 }
 
-func (dl *DataLoader) LoadRaces() ([]models.Race, error) {
+func (dl *DataLoader) LoadRaces(gameState *models.GameState) ([]models.Race, error) {
+	// If game state has saved races, use them
+	if len(gameState.AvailableRaces) > 0 {
+		return gameState.AvailableRaces, nil
+	}
+	// Otherwise generate new races for new game
 	return dl.generateDefaultRaces(), nil
 }
 

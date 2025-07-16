@@ -9,8 +9,6 @@ add scrolling for season summary screen. otherwise the cards are stacked too tal
 
 update our README.md and in game info screen to reflect new help info.
 
-linter_errors.png
-
 add race history (with horse results and etc) in season summary.
 
 also for disobedience check please factor in horse mental and morale and

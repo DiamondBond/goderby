@@ -131,6 +131,8 @@ func (m SummaryModel) View() string {
 		return m.renderShareableSeasonSummaryView()
 	case ShareableRetirementCard:
 		return m.renderShareableRetirementCardView()
+	case ViewingSeason:
+		return m.renderSeasonSummaryView()
 	default:
 		return m.renderSeasonSummaryView()
 	}

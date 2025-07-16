@@ -13,7 +13,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const GameVersion = "v1.9.2"
+const GameVersion = "v1.9.4"
 
 type AppModel struct {
 	currentView ui.ViewState
@@ -184,7 +184,7 @@ func (m *AppModel) initializeData() (*AppModel, tea.Cmd) {
 	m.gameState = gameState
 
 	// Load horses
-	horses, err := m.dataLoader.LoadHorses()
+	horses, err := m.dataLoader.LoadHorses(m.gameState)
 	if err != nil {
 		log.Printf("Failed to load horses: %v", err)
 		horses = []models.Horse{}
@@ -193,7 +193,7 @@ func (m *AppModel) initializeData() (*AppModel, tea.Cmd) {
 	m.gameState.AvailableHorses = horses
 
 	// Load supporters
-	supporters, err := m.dataLoader.LoadSupporters()
+	supporters, err := m.dataLoader.LoadSupporters(m.gameState)
 	if err != nil {
 		log.Printf("Failed to load supporters: %v", err)
 		supporters = []models.Supporter{}
@@ -202,7 +202,7 @@ func (m *AppModel) initializeData() (*AppModel, tea.Cmd) {
 	m.gameState.Supporters = supporters
 
 	// Load races
-	races, err := m.dataLoader.LoadRaces()
+	races, err := m.dataLoader.LoadRaces(m.gameState)
 	if err != nil {
 		log.Printf("Failed to load races: %v", err)
 		races = []models.Race{}

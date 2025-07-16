@@ -221,7 +221,7 @@ func RenderShareableRetirementCard(retired models.RetiredHorse) string {
 	var b strings.Builder
 
 	// Header
-	header := fmt.Sprintf("🎉 RETIREMENT CEREMONY 🎉")
+	header := "🎉 RETIREMENT CEREMONY 🎉"
 	b.WriteString(shareableHeaderStyle.Render(header))
 	b.WriteString("\n")
 
