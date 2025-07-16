@@ -5,6 +5,7 @@ import "time"
 type GameState struct {
 	PlayerHorse       *Horse      `json:"player_horse"`
 	Supporters        []Supporter `json:"supporters"`
+	ActiveSupporters  []string    `json:"active_supporters"` // IDs of selected supporters (max 4)
 	AvailableHorses   []Horse     `json:"available_horses"`
 	AvailableRaces    []Race      `json:"available_races"`
 	Season            Season      `json:"season"`
@@ -102,6 +103,7 @@ func NewGameState() *GameState {
 	return &GameState{
 		PlayerHorse:       nil,
 		Supporters:        make([]Supporter, 0),
+		ActiveSupporters:  make([]string, 0),
 		AvailableHorses:   make([]Horse, 0),
 		AvailableRaces:    make([]Race, 0),
 		Season:            NewSeason(1),
@@ -109,4 +111,84 @@ func NewGameState() *GameState {
 		AllCompletedRaces: make([]string, 0),
 		SavedAt:           time.Now(),
 	}
+}
+
+// GetActiveSupporters returns the supporters that are currently selected/active
+func (gs *GameState) GetActiveSupporters() []Supporter {
+	var activeSupporters []Supporter
+	for _, supporter := range gs.Supporters {
+		for _, activeID := range gs.ActiveSupporters {
+			if supporter.ID == activeID {
+				activeSupporters = append(activeSupporters, supporter)
+				break
+			}
+		}
+	}
+	return activeSupporters
+}
+
+// GetOwnedSupporters returns all supporters that the player owns
+func (gs *GameState) GetOwnedSupporters() []Supporter {
+	var ownedSupporters []Supporter
+	for _, supporter := range gs.Supporters {
+		if supporter.IsOwned {
+			ownedSupporters = append(ownedSupporters, supporter)
+		}
+	}
+	return ownedSupporters
+}
+
+// CanSelectSupporter checks if a supporter can be selected (owned and not at 4 limit)
+func (gs *GameState) CanSelectSupporter(supporterID string) bool {
+	// Check if we already have 4 active supporters
+	if len(gs.ActiveSupporters) >= 4 {
+		return false
+	}
+
+	// Check if supporter is owned
+	for _, supporter := range gs.Supporters {
+		if supporter.ID == supporterID {
+			return supporter.IsOwned
+		}
+	}
+
+	return false
+}
+
+// SelectSupporter adds a supporter to the active list
+func (gs *GameState) SelectSupporter(supporterID string) bool {
+	if !gs.CanSelectSupporter(supporterID) {
+		return false
+	}
+
+	// Check if already selected
+	for _, activeID := range gs.ActiveSupporters {
+		if activeID == supporterID {
+			return false
+		}
+	}
+
+	gs.ActiveSupporters = append(gs.ActiveSupporters, supporterID)
+	return true
+}
+
+// DeselectSupporter removes a supporter from the active list
+func (gs *GameState) DeselectSupporter(supporterID string) bool {
+	for i, activeID := range gs.ActiveSupporters {
+		if activeID == supporterID {
+			gs.ActiveSupporters = append(gs.ActiveSupporters[:i], gs.ActiveSupporters[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+// IsSupporter selected checks if a supporter is currently active
+func (gs *GameState) IsSupporterSelected(supporterID string) bool {
+	for _, activeID := range gs.ActiveSupporters {
+		if activeID == supporterID {
+			return true
+		}
+	}
+	return false
 }

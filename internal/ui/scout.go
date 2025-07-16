@@ -79,7 +79,7 @@ func (m ScoutModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				selectedHorse := m.horses[m.cursor]
 				m.gameState.PlayerHorse = &selectedHorse
 				return m, func() tea.Msg {
-					return HorseSelectedMsg{Horse: selectedHorse}
+					return NavigationMsg{State: SupporterSelectionView}
 				}
 			} else if !m.inspecting {
 				m.inspecting = true

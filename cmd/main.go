@@ -20,13 +20,14 @@ type AppModel struct {
 	dataLoader  *data.DataLoader
 
 	// View models
-	mainMenu   ui.MainMenuModel
-	scout      ui.ScoutModel
-	train      ui.TrainModel
-	race       ui.RaceModel
-	supporters ui.SupportersModel
-	summary    ui.SummaryModel
-	info       ui.InfoModel
+	mainMenu           ui.MainMenuModel
+	scout              ui.ScoutModel
+	supporterSelection ui.SupporterSelectionModel
+	train              ui.TrainModel
+	race               ui.RaceModel
+	supporters         ui.SupportersModel
+	summary            ui.SummaryModel
+	info               ui.InfoModel
 
 	// Data
 	availableHorses     []models.Horse
@@ -82,6 +83,11 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.currentView = ui.MainMenuView
 		return m, nil
 
+	case ui.SupportersSelectedMsg:
+		m.mainMenu = ui.NewMainMenuModel(m.gameState, GameVersion)
+		m.currentView = ui.MainMenuView
+		return m, nil
+
 	case ui.WeekCompleteMsg:
 		m.gameState.Season.NextWeek()
 		m.train = ui.NewTrainModel(m.gameState)
@@ -101,6 +107,10 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var model tea.Model
 		model, cmd = m.scout.Update(msg)
 		m.scout = model.(ui.ScoutModel)
+	case ui.SupporterSelectionView:
+		var model tea.Model
+		model, cmd = m.supporterSelection.Update(msg)
+		m.supporterSelection = model.(ui.SupporterSelectionModel)
 	case ui.TrainView:
 		var model tea.Model
 		model, cmd = m.train.Update(msg)
@@ -140,6 +150,8 @@ func (m *AppModel) View() string {
 		return m.mainMenu.View()
 	case ui.ScoutView:
 		return m.scout.View()
+	case ui.SupporterSelectionView:
+		return m.supporterSelection.View()
 	case ui.TrainView:
 		return m.train.View()
 	case ui.RaceView:
@@ -194,6 +206,7 @@ func (m *AppModel) initializeData() (*AppModel, tea.Cmd) {
 	// Initialize view models
 	m.mainMenu = ui.NewMainMenuModel(m.gameState, GameVersion)
 	m.scout = ui.NewScoutModel(m.gameState, m.availableHorses)
+	m.supporterSelection = ui.NewSupporterSelectionModel(m.gameState)
 	m.train = ui.NewTrainModel(m.gameState)
 	m.race = ui.NewRaceModel(m.gameState, m.availableRaces)
 	m.summary = ui.NewSummaryModel(m.gameState)
@@ -213,6 +226,8 @@ func (m *AppModel) handleNavigation(msg ui.NavigationMsg) (*AppModel, tea.Cmd) {
 		m.mainMenu = ui.NewMainMenuModel(m.gameState, GameVersion)
 	case ui.ScoutView:
 		m.scout = ui.NewScoutModel(m.gameState, m.availableHorses)
+	case ui.SupporterSelectionView:
+		m.supporterSelection = ui.NewSupporterSelectionModel(m.gameState)
 	case ui.TrainView:
 		m.train = ui.NewTrainModel(m.gameState)
 	case ui.RaceView:

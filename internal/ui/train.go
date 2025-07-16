@@ -366,14 +366,8 @@ func (m TrainModel) isWeekComplete() bool {
 
 func (m TrainModel) performTraining() (TrainModel, tea.Cmd) {
 	horse := m.gameState.PlayerHorse
-	supporters := make([]models.Supporter, 0)
-
-	// Get owned supporters
-	for _, supporter := range m.gameState.Supporters {
-		if supporter.IsOwned {
-			supporters = append(supporters, supporter)
-		}
-	}
+	// Get only active supporters (max 4)
+	supporters := m.gameState.GetActiveSupporters()
 
 	result := horse.Train(m.selectedType, supporters)
 	m.lastResult = &result

@@ -101,6 +101,7 @@ func (dl *DataLoader) generateDefaultHorses() []models.Horse {
 
 func (dl *DataLoader) generateDefaultSupporters() []models.Supporter {
 	supporters := []models.Supporter{
+		// Common supporters (basic single-stat bonuses)
 		{
 			ID:          "sup_001",
 			Name:        "Speed Coach",
@@ -113,35 +114,153 @@ func (dl *DataLoader) generateDefaultSupporters() []models.Supporter {
 		},
 		{
 			ID:          "sup_002",
-			Name:        "Stamina Trainer",
-			Rarity:      models.Rare,
-			Description: "Boosts stamina and technique training",
+			Name:        "Endurance Trainer",
+			Rarity:      models.Common,
+			Description: "Focuses on stamina building",
 			TrainingBonus: map[models.TrainingType]int{
-				models.StaminaTraining:   7,
-				models.TechniqueTraining: 3,
+				models.StaminaTraining: 5,
 			},
 			IsOwned: true,
 		},
 		{
 			ID:          "sup_003",
-			Name:        "Mental Coach",
-			Rarity:      models.SuperRare,
-			Description: "Expert in mental training and morale",
+			Name:        "Technique Specialist",
+			Rarity:      models.Common,
+			Description: "Helps perfect racing technique",
 			TrainingBonus: map[models.TrainingType]int{
-				models.MentalTraining: 10,
+				models.TechniqueTraining: 5,
+			},
+			IsOwned: true,
+		},
+		{
+			ID:          "sup_004",
+			Name:        "Mental Coach",
+			Rarity:      models.Common,
+			Description: "Basic mental training support",
+			TrainingBonus: map[models.TrainingType]int{
+				models.MentalTraining: 5,
+			},
+			IsOwned: true,
+		},
+		// Rare supporters (dual-stat bonuses)
+		{
+			ID:          "sup_005",
+			Name:        "Sprint Master",
+			Rarity:      models.Rare,
+			Description: "Combines speed and technique training",
+			TrainingBonus: map[models.TrainingType]int{
+				models.SpeedTraining:     7,
+				models.TechniqueTraining: 3,
+			},
+			IsOwned: true,
+		},
+		{
+			ID:          "sup_006",
+			Name:        "Stamina Expert",
+			Rarity:      models.Rare,
+			Description: "Boosts stamina and mental resilience",
+			TrainingBonus: map[models.TrainingType]int{
+				models.StaminaTraining: 7,
+				models.MentalTraining:  3,
+			},
+			IsOwned: true,
+		},
+		{
+			ID:          "sup_007",
+			Name:        "Racing Tactician",
+			Rarity:      models.Rare,
+			Description: "Enhances technique and mental focus",
+			TrainingBonus: map[models.TrainingType]int{
+				models.TechniqueTraining: 7,
+				models.MentalTraining:    3,
 			},
 			IsOwned: false,
 		},
 		{
-			ID:          "sup_004",
-			Name:        "Elite Trainer",
+			ID:          "sup_008",
+			Name:        "Power Trainer",
+			Rarity:      models.Rare,
+			Description: "Builds speed and stamina together",
+			TrainingBonus: map[models.TrainingType]int{
+				models.SpeedTraining:   6,
+				models.StaminaTraining: 4,
+			},
+			IsOwned: false,
+		},
+		// Super Rare supporters (tri-stat bonuses)
+		{
+			ID:          "sup_009",
+			Name:        "Derby Champion",
+			Rarity:      models.SuperRare,
+			Description: "Former champion with vast experience",
+			TrainingBonus: map[models.TrainingType]int{
+				models.StaminaTraining:   8,
+				models.SpeedTraining:     5,
+				models.TechniqueTraining: 2,
+			},
+			IsOwned: false,
+		},
+		{
+			ID:          "sup_010",
+			Name:        "Mind & Body Coach",
+			Rarity:      models.SuperRare,
+			Description: "Holistic training approach",
+			TrainingBonus: map[models.TrainingType]int{
+				models.MentalTraining:    8,
+				models.TechniqueTraining: 5,
+				models.StaminaTraining:   2,
+			},
+			IsOwned: false,
+		},
+		{
+			ID:          "sup_011",
+			Name:        "Speed Virtuoso",
+			Rarity:      models.SuperRare,
+			Description: "Master of speed and finesse",
+			TrainingBonus: map[models.TrainingType]int{
+				models.SpeedTraining:     8,
+				models.TechniqueTraining: 4,
+				models.MentalTraining:    3,
+			},
+			IsOwned: false,
+		},
+		// Ultra Rare supporters (quad-stat bonuses)
+		{
+			ID:          "sup_012",
+			Name:        "Legendary Trainer",
 			Rarity:      models.UltraRare,
-			Description: "Master trainer with balanced bonuses",
+			Description: "Master trainer with balanced expertise",
 			TrainingBonus: map[models.TrainingType]int{
 				models.StaminaTraining:   5,
 				models.SpeedTraining:     5,
 				models.TechniqueTraining: 5,
 				models.MentalTraining:    5,
+			},
+			IsOwned: false,
+		},
+		{
+			ID:          "sup_013",
+			Name:        "Triple Crown Winner",
+			Rarity:      models.UltraRare,
+			Description: "Elite champion with winning mentality",
+			TrainingBonus: map[models.TrainingType]int{
+				models.SpeedTraining:     6,
+				models.TechniqueTraining: 6,
+				models.MentalTraining:    6,
+				models.StaminaTraining:   2,
+			},
+			IsOwned: false,
+		},
+		{
+			ID:          "sup_014",
+			Name:        "Miracle Worker",
+			Rarity:      models.UltraRare,
+			Description: "Transforms any horse into a champion",
+			TrainingBonus: map[models.TrainingType]int{
+				models.StaminaTraining:   8,
+				models.SpeedTraining:     4,
+				models.TechniqueTraining: 4,
+				models.MentalTraining:    4,
 			},
 			IsOwned: false,
 		},

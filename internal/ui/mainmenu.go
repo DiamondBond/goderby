@@ -133,6 +133,7 @@ type ViewState int
 const (
 	MainMenuView ViewState = iota
 	ScoutView
+	SupporterSelectionView
 	TrainView
 	RaceView
 	SupportersView
