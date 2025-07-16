@@ -6,10 +6,11 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"goderby/internal/game"
 	"goderby/internal/models"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type RaceModel struct {
@@ -312,7 +313,7 @@ func (m RaceModel) renderConfirmView() string {
 func (m RaceModel) renderRaceView() string {
 	var b strings.Builder
 
-	b.WriteString(RenderTitle("Live Race"))
+	b.WriteString(RenderTitle("🏁 Live Race 🏁"))
 	b.WriteString("\n\n")
 
 	race := m.races[m.selectedRace]
@@ -322,88 +323,249 @@ func (m RaceModel) renderRaceView() string {
 	if m.currentTurn < len(m.liveProgress) {
 		progress := m.liveProgress[m.currentTurn]
 
-		// Race positions
+		// Animated race track with horses
 		if len(progress.Positions) > 0 {
-			b.WriteString("Current Positions:\n")
+			b.WriteString(m.renderAnimatedRaceTrack(progress, race))
+			b.WriteString("\n")
 
-			// Create a slice of horse positions for sorting
-			type HorsePosition struct {
-				HorseID  string
-				Position int
-				Name     string
-				Distance int
-			}
-
-			var positions []HorsePosition
-			for horseID, position := range progress.Positions {
-				name := horseID
-				// Try to find horse name from results
-				for _, entrant := range m.result.Results {
-					if entrant.HorseID == horseID {
-						name = entrant.HorseName
-						break
-					}
-				}
-				// If not found in results, try to get from game state
-				if name == horseID && horseID == m.gameState.PlayerHorse.ID {
-					name = m.gameState.PlayerHorse.Name
-				}
-
-				positions = append(positions, HorsePosition{
-					HorseID:  horseID,
-					Position: position,
-					Name:     name,
-					Distance: progress.Distances[horseID],
-				})
-			}
-
-			// Sort by position
-			for i := 0; i < len(positions)-1; i++ {
-				for j := i + 1; j < len(positions); j++ {
-					if positions[i].Position > positions[j].Position {
-						positions[i], positions[j] = positions[j], positions[i]
-					}
-				}
-			}
-
-			for _, pos := range positions {
-				marker := "  "
-				isPlayerHorse := pos.HorseID == m.gameState.PlayerHorse.ID
-				if isPlayerHorse {
-					marker = "→ "
-				}
-
-				// Create progress bar for each horse
-				progressBar := RenderProgressBar(pos.Distance, race.Distance, 30, statBarStyle)
-
-				horseLine := fmt.Sprintf("%s%d. %s %s",
-					marker, pos.Position, pos.Name, progressBar)
-
-				// Highlight player's horse line
-				if isPlayerHorse {
-					horseLine = lipgloss.NewStyle().Foreground(accentColor).Bold(true).Render(horseLine)
-				}
-
-				b.WriteString(horseLine + "\n")
-			}
+			// // Current standings
+			// b.WriteString("🏆 Current Standings:\n")
+			// b.WriteString(m.renderRaceStandings(progress))
 		}
 
 		b.WriteString("\n")
 
 		// Commentary
 		if progress.Commentary != "" {
-			b.WriteString(RenderInfo(progress.Commentary))
+			b.WriteString(RenderInfo("📢 " + progress.Commentary))
 			b.WriteString("\n")
 		}
 
 		// Events
 		for _, event := range progress.Events {
-			b.WriteString(RenderWarning(event))
+			b.WriteString(RenderWarning("⚡ " + event))
 			b.WriteString("\n")
 		}
 	}
 
 	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
+}
+
+func (m RaceModel) renderAnimatedRaceTrack(progress models.RaceProgressUpdate, race models.Race) string {
+	var b strings.Builder
+	trackWidth := 60
+
+	// Create a slice of horse positions for sorting
+	type HorsePosition struct {
+		HorseID  string
+		Position int
+		Name     string
+		Distance int
+	}
+
+	var positions []HorsePosition
+	for horseID, position := range progress.Positions {
+		name := horseID
+		// Try to find horse name from results
+		for _, entrant := range m.result.Results {
+			if entrant.HorseID == horseID {
+				name = entrant.HorseName
+				break
+			}
+		}
+		// If not found in results, try to get from game state
+		if name == horseID && horseID == m.gameState.PlayerHorse.ID {
+			name = m.gameState.PlayerHorse.Name
+		}
+
+		positions = append(positions, HorsePosition{
+			HorseID:  horseID,
+			Position: position,
+			Name:     name,
+			Distance: progress.Distances[horseID],
+		})
+	}
+
+	// Sort by current distance (race order)
+	for i := 0; i < len(positions)-1; i++ {
+		for j := i + 1; j < len(positions); j++ {
+			if positions[i].Distance < positions[j].Distance {
+				positions[i], positions[j] = positions[j], positions[i]
+			}
+		}
+	}
+
+	// Render the race track header
+	b.WriteString("🏁 RACE TRACK 🏁\n")
+	startLine := "START|"
+	finishLine := "|FINISH"
+	trackLine := startLine + strings.Repeat("─", trackWidth-len(startLine)-len(finishLine)) + finishLine
+	b.WriteString(trackLine + "\n")
+
+	// Render each horse on the track
+	for i, pos := range positions {
+		if i >= 8 { // Limit to 8 horses to fit on screen
+			break
+		}
+
+		// Calculate horse position on track (0 to trackWidth-8)
+		horsePos := int(float64(pos.Distance) / float64(race.Distance) * float64(trackWidth-8))
+		if horsePos < 0 {
+			horsePos = 0
+		}
+		if horsePos > trackWidth-8 {
+			horsePos = trackWidth - 8
+		}
+
+		// Create the track line with the horse
+		trackLine := "     |"
+		spaces := strings.Repeat(" ", horsePos)
+
+		// Choose horse animation based on position and speed
+		var horseSprite string
+		isPlayerHorse := pos.HorseID == m.gameState.PlayerHorse.ID
+
+		// Different horse sprites for animation variety
+		horseSprites := []string{
+			"🐎", "🏇", "🐴", "🦄",
+		}
+
+		// Use different sprite based on horse index for variety
+		spriteIndex := i % len(horseSprites)
+		if isPlayerHorse {
+			// Player horse is always the unicorn for special visibility
+			horseSprite = "🦄⭐"
+		} else {
+			horseSprite = horseSprites[spriteIndex]
+		}
+
+		// Add some trailing dust/wind effects for leading horses
+		if i <= 2 && pos.Distance > race.Distance/4 {
+			horseSprite += "💨"
+		}
+
+		trackLine += spaces + horseSprite
+
+		// Fill remaining space and close track
+		remainingSpace := trackWidth - len(spaces) - 8 - 6 // 6 for start marker, 8 for horse sprite
+		if remainingSpace > 0 {
+			trackLine += strings.Repeat(" ", remainingSpace)
+		}
+		trackLine += "|"
+
+		// Horse name and position info
+		horseName := pos.Name
+		if len(horseName) > 25 {
+			horseName = horseName[:22] + "..."
+		}
+
+		positionInfo := fmt.Sprintf(" %d. %s", pos.Position, horseName)
+
+		// Highlight player horse
+		if isPlayerHorse {
+			trackLine = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700")).Bold(true).Render(trackLine)
+			positionInfo = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700")).Bold(true).Render(positionInfo + " ⭐")
+		}
+
+		b.WriteString(trackLine + positionInfo + "\n")
+	}
+
+	// Render the track footer
+	b.WriteString(trackLine + "\n")
+
+	// Distance markers
+	distanceMarkers := "      "
+	quarter := trackWidth / 4
+	for i := 0; i < 4; i++ {
+		marker := fmt.Sprintf("%dm", (race.Distance/4)*(i+1))
+		distanceMarkers += strings.Repeat(" ", quarter-len(marker)/2) + marker
+	}
+	b.WriteString(distanceMarkers + "\n")
+
+	return b.String()
+}
+
+func (m RaceModel) renderRaceStandings(progress models.RaceProgressUpdate) string {
+	var b strings.Builder
+
+	// Create a slice of horse positions for sorting by position
+	type HorsePosition struct {
+		HorseID  string
+		Position int
+		Name     string
+		Distance int
+	}
+
+	var positions []HorsePosition
+	for horseID, position := range progress.Positions {
+		name := horseID
+		// Try to find horse name from results
+		for _, entrant := range m.result.Results {
+			if entrant.HorseID == horseID {
+				name = entrant.HorseName
+				break
+			}
+		}
+		// If not found in results, try to get from game state
+		if name == horseID && horseID == m.gameState.PlayerHorse.ID {
+			name = m.gameState.PlayerHorse.Name
+		}
+
+		positions = append(positions, HorsePosition{
+			HorseID:  horseID,
+			Position: position,
+			Name:     name,
+			Distance: progress.Distances[horseID],
+		})
+	}
+
+	// Sort by position
+	for i := 0; i < len(positions)-1; i++ {
+		for j := i + 1; j < len(positions); j++ {
+			if positions[i].Position > positions[j].Position {
+				positions[i], positions[j] = positions[j], positions[i]
+			}
+		}
+	}
+
+	// Show top 5 positions
+	for i, pos := range positions {
+		if i >= 5 {
+			break
+		}
+
+		isPlayerHorse := pos.HorseID == m.gameState.PlayerHorse.ID
+
+		// Position medal/icon
+		var posIcon string
+		switch pos.Position {
+		case 1:
+			posIcon = "🥇"
+		case 2:
+			posIcon = "🥈"
+		case 3:
+			posIcon = "🥉"
+		default:
+			posIcon = fmt.Sprintf("%d.", pos.Position)
+		}
+
+		// Horse name
+		horseName := pos.Name
+		if len(horseName) > 30 {
+			horseName = horseName[:27] + "..."
+		}
+
+		standingLine := fmt.Sprintf("  %s %s", posIcon, horseName)
+
+		// Highlight player horse
+		if isPlayerHorse {
+			standingLine = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700")).Bold(true).Render(standingLine + " ⭐")
+		}
+
+		b.WriteString(standingLine + "\n")
+	}
+
+	return b.String()
 }
 
 func (m RaceModel) renderResultView() string {

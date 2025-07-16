@@ -78,8 +78,15 @@ func (m ScoutModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.confirmed = true
 				selectedHorse := m.horses[m.cursor]
 				m.gameState.PlayerHorse = &selectedHorse
+
+				// Auto-select the 4 Common supporters
+				commonSupporterIDs := []string{"sup_001", "sup_002", "sup_003", "sup_004"}
+				for _, supporterID := range commonSupporterIDs {
+					m.gameState.SelectSupporter(supporterID)
+				}
+
 				return m, func() tea.Msg {
-					return NavigationMsg{State: SupporterSelectionView}
+					return NavigationMsg{State: MainMenuView}
 				}
 			} else if !m.inspecting {
 				m.inspecting = true
