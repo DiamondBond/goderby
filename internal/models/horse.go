@@ -115,13 +115,13 @@ func (h *Horse) GetOverallRating() int {
 func (h *Horse) GetAgeAdjustedRating(baseRating int) int {
 	ageFactor := h.GetAgePerformanceFactor()
 	adjustedRating := int(float64(baseRating) * ageFactor)
-	
+
 	// Ensure rating doesn't go below 10% of base
 	minRating := baseRating / 10
 	if adjustedRating < minRating {
 		adjustedRating = minRating
 	}
-	
+
 	return adjustedRating
 }
 

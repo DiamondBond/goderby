@@ -527,12 +527,12 @@ func (m RaceModel) completeRace() (RaceModel, tea.Cmd) {
 	if m.gameState.AllCompletedRaces == nil {
 		m.gameState.AllCompletedRaces = make([]string, 0)
 	}
-	
+
 	if len(m.races) > m.selectedRace {
 		raceID := m.races[m.selectedRace].ID
 		// Add to current season
 		m.gameState.Season.CompletedRaces = append(m.gameState.Season.CompletedRaces, raceID)
-		
+
 		// Add to global completion tracker if not already present
 		found := false
 		for _, completedID := range m.gameState.AllCompletedRaces {

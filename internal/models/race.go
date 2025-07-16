@@ -178,12 +178,12 @@ func (r *Race) MeetsProgressionRequirements(gameState *GameState) bool {
 func (r *Race) hasCompletedRaceOfGrade(gameState *GameState, targetGrade RaceGrade) bool {
 	// Check both current season and all-time completed races
 	allCompletedRaces := make([]string, 0)
-	
+
 	// Add current season races
 	if gameState.Season.CompletedRaces != nil {
 		allCompletedRaces = append(allCompletedRaces, gameState.Season.CompletedRaces...)
 	}
-	
+
 	// Add all-time completed races
 	if gameState.AllCompletedRaces != nil {
 		allCompletedRaces = append(allCompletedRaces, gameState.AllCompletedRaces...)

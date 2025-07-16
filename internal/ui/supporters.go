@@ -120,7 +120,7 @@ func (m SupportersModel) View() string {
 	// Display supporters
 	for i, supporter := range displaySupporter {
 		style := lipgloss.NewStyle().Padding(1, 2).Margin(0, 0, 1, 0)
-		
+
 		if i == m.cursor {
 			style = style.Background(lipgloss.Color("#1a1a2e")).
 				Border(lipgloss.RoundedBorder()).

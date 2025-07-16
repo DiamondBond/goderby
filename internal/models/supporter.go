@@ -59,4 +59,3 @@ func NewSupporter(name, description string, rarity Rarity, bonuses map[TrainingT
 		IsOwned:       false,
 	}
 }
-

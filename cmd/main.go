@@ -27,9 +27,9 @@ type AppModel struct {
 	summary    ui.SummaryModel
 
 	// Data
-	availableHorses []models.Horse
-	availableRaces  []models.Race
-	supporters      []models.Supporter
+	availableHorses     []models.Horse
+	availableRaces      []models.Race
+	availableSupporters []models.Supporter
 
 	// State
 	initialized bool
@@ -171,7 +171,7 @@ func (m *AppModel) initializeData() (*AppModel, tea.Cmd) {
 		log.Printf("Failed to load supporters: %v", err)
 		supporters = []models.Supporter{}
 	}
-	m.supporters = supporters
+	m.availableSupporters = supporters
 	m.gameState.Supporters = supporters
 
 	// Load races

@@ -3,14 +3,14 @@ package models
 import "time"
 
 type GameState struct {
-	PlayerHorse        *Horse      `json:"player_horse"`
-	Supporters         []Supporter `json:"supporters"`
-	AvailableHorses    []Horse     `json:"available_horses"`
-	AvailableRaces     []Race      `json:"available_races"`
-	Season             Season      `json:"season"`
-	GameStats          GameStats   `json:"game_stats"`
-	AllCompletedRaces  []string    `json:"all_completed_races"` // Track all races ever completed across seasons
-	SavedAt            time.Time   `json:"saved_at"`
+	PlayerHorse       *Horse      `json:"player_horse"`
+	Supporters        []Supporter `json:"supporters"`
+	AvailableHorses   []Horse     `json:"available_horses"`
+	AvailableRaces    []Race      `json:"available_races"`
+	Season            Season      `json:"season"`
+	GameStats         GameStats   `json:"game_stats"`
+	AllCompletedRaces []string    `json:"all_completed_races"` // Track all races ever completed across seasons
+	SavedAt           time.Time   `json:"saved_at"`
 }
 
 type Season struct {
