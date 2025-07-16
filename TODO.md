@@ -1,0 +1,1 @@
+please add a horse wellness spa or something like that in the menu so players can spend money to reduce fatigue on horses via like a spa/massage and other horse fatigue reducing activities, add cute lil animations for these events once u pay for them.
