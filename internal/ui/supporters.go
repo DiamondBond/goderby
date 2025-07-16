@@ -13,6 +13,8 @@ type SupportersModel struct {
 	gameState    *models.GameState
 	cursor       int
 	selectedPage int // 0 = owned, 1 = all available
+	viewStart    int // First visible supporter
+	maxVisible   int // Maximum visible supporters
 }
 
 func NewSupportersModel(gameState *models.GameState) SupportersModel {
@@ -20,6 +22,8 @@ func NewSupportersModel(gameState *models.GameState) SupportersModel {
 		gameState:    gameState,
 		cursor:       0,
 		selectedPage: 0,
+		viewStart:    0,
+		maxVisible:   3,
 	}
 }
 
@@ -40,14 +44,23 @@ func (m SupportersModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "tab":
 			m.selectedPage = (m.selectedPage + 1) % 2
 			m.cursor = 0
+			m.viewStart = 0
 		case "up", "k":
 			if m.cursor > 0 {
 				m.cursor--
+				// Adjust view if cursor goes above visible area
+				if m.cursor < m.viewStart {
+					m.viewStart = m.cursor
+				}
 			}
 		case "down", "j":
 			maxItems := m.getMaxItems()
 			if m.cursor < maxItems-1 {
 				m.cursor++
+				// Adjust view if cursor goes below visible area
+				if m.cursor >= m.viewStart+m.maxVisible {
+					m.viewStart = m.cursor - m.maxVisible + 1
+				}
 			}
 		}
 	}
@@ -119,8 +132,11 @@ func (m SupportersModel) View() string {
 		displaySupporter = m.gameState.Supporters
 	}
 
-	// Display supporters
-	for i, supporter := range displaySupporter {
+	// Display supporters with scrolling
+	viewEnd := min(m.viewStart+m.maxVisible, len(displaySupporter))
+
+	for i := m.viewStart; i < viewEnd; i++ {
+		supporter := displaySupporter[i]
 		style := lipgloss.NewStyle().
 			Padding(1, 2).
 			Margin(0, 0, 1, 0).
@@ -155,6 +171,20 @@ func (m SupportersModel) View() string {
 		rarityColor := lipgloss.Color(supporter.Rarity.Color())
 		styledContent := style.Foreground(rarityColor).Render(content)
 		b.WriteString(styledContent)
+		b.WriteString("\n")
+	}
+
+	// Show scroll indicators
+	if len(displaySupporter) > m.maxVisible {
+		scrollInfo := fmt.Sprintf("Showing %d-%d of %d supporters",
+			m.viewStart+1, viewEnd, len(displaySupporter))
+		if m.viewStart > 0 {
+			scrollInfo += " ↑"
+		}
+		if viewEnd < len(displaySupporter) {
+			scrollInfo += " ↓"
+		}
+		b.WriteString(RenderInfo(scrollInfo))
 		b.WriteString("\n")
 	}
 

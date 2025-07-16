@@ -10,18 +10,18 @@ import (
 )
 
 type SupporterSelectionModel struct {
-	gameState       *models.GameState
-	cursor          int
-	ownedSupporters []models.Supporter
-	confirmed       bool
+	gameState           *models.GameState
+	cursor              int
+	availableSupporters []models.Supporter
+	confirmed           bool
 }
 
 func NewSupporterSelectionModel(gameState *models.GameState) SupporterSelectionModel {
 	return SupporterSelectionModel{
-		gameState:       gameState,
-		cursor:          0,
-		ownedSupporters: gameState.GetOwnedSupporters(),
-		confirmed:       false,
+		gameState:           gameState,
+		cursor:              0,
+		availableSupporters: gameState.Supporters,
+		confirmed:           false,
 	}
 }
 
@@ -49,7 +49,7 @@ func (m SupporterSelectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor--
 			}
 		case "down", "j":
-			if m.cursor < len(m.ownedSupporters)-1 {
+			if m.cursor < len(m.availableSupporters)-1 {
 				m.cursor++
 			}
 		case "enter", " ":
@@ -59,8 +59,8 @@ func (m SupporterSelectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
-			if len(m.ownedSupporters) > 0 {
-				selectedSupporter := m.ownedSupporters[m.cursor]
+			if len(m.availableSupporters) > 0 {
+				selectedSupporter := m.availableSupporters[m.cursor]
 
 				// Toggle selection
 				if m.gameState.IsSupporterSelected(selectedSupporter.ID) {
@@ -71,6 +71,16 @@ func (m SupporterSelectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "c":
 			if !m.confirmed && len(m.gameState.ActiveSupporters) > 0 {
+				// Mark selected supporters as owned
+				for _, supporterID := range m.gameState.ActiveSupporters {
+					for i, supporter := range m.gameState.Supporters {
+						if supporter.ID == supporterID {
+							m.gameState.Supporters[i].IsOwned = true
+							break
+						}
+					}
+				}
+
 				m.confirmed = true
 				return m, func() tea.Msg {
 					return SupportersSelectedMsg{Supporters: m.gameState.GetActiveSupporters()}
@@ -118,15 +128,15 @@ func (m SupporterSelectionModel) View() string {
 	b.WriteString(RenderInfo("These supporters will provide training bonuses throughout the season"))
 	b.WriteString("\n\n")
 
-	if len(m.ownedSupporters) == 0 {
-		b.WriteString(RenderWarning("You don't own any supporters yet!"))
+	if len(m.availableSupporters) == 0 {
+		b.WriteString(RenderWarning("No supporters available!"))
 		b.WriteString("\n\n")
 		b.WriteString(RenderHelp("Press ESC to go back"))
 		return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
 	}
 
 	// Supporter list
-	for i, supporter := range m.ownedSupporters {
+	for i, supporter := range m.availableSupporters {
 		cursor := " "
 		if m.cursor == i {
 			cursor = ">"

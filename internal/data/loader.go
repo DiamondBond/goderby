@@ -110,7 +110,7 @@ func (dl *DataLoader) generateDefaultSupporters() []models.Supporter {
 			TrainingBonus: map[models.TrainingType]int{
 				models.SpeedTraining: 5,
 			},
-			IsOwned: true,
+			IsOwned: false,
 		},
 		{
 			ID:          "sup_002",
@@ -120,7 +120,7 @@ func (dl *DataLoader) generateDefaultSupporters() []models.Supporter {
 			TrainingBonus: map[models.TrainingType]int{
 				models.StaminaTraining: 5,
 			},
-			IsOwned: true,
+			IsOwned: false,
 		},
 		{
 			ID:          "sup_003",
@@ -130,7 +130,7 @@ func (dl *DataLoader) generateDefaultSupporters() []models.Supporter {
 			TrainingBonus: map[models.TrainingType]int{
 				models.TechniqueTraining: 5,
 			},
-			IsOwned: true,
+			IsOwned: false,
 		},
 		{
 			ID:          "sup_004",
@@ -140,7 +140,7 @@ func (dl *DataLoader) generateDefaultSupporters() []models.Supporter {
 			TrainingBonus: map[models.TrainingType]int{
 				models.MentalTraining: 5,
 			},
-			IsOwned: true,
+			IsOwned: false,
 		},
 		// Rare supporters (dual-stat bonuses)
 		{
@@ -152,7 +152,7 @@ func (dl *DataLoader) generateDefaultSupporters() []models.Supporter {
 				models.SpeedTraining:     7,
 				models.TechniqueTraining: 3,
 			},
-			IsOwned: true,
+			IsOwned: false,
 		},
 		{
 			ID:          "sup_006",
@@ -163,7 +163,7 @@ func (dl *DataLoader) generateDefaultSupporters() []models.Supporter {
 				models.StaminaTraining: 7,
 				models.MentalTraining:  3,
 			},
-			IsOwned: true,
+			IsOwned: false,
 		},
 		{
 			ID:          "sup_007",
