@@ -447,7 +447,9 @@ func (m RaceModel) renderAnimatedRaceTrack(progress models.RaceProgressUpdate, r
 		trackLine += spaces + horseSprite
 
 		// Fill remaining space and close track
-		remainingSpace := trackWidth - len(spaces) - 8 - 6 // 6 for start marker, 8 for horse sprite
+		// Calculate actual sprite width for proper alignment
+		spriteWidth := len(horseSprite)
+		remainingSpace := trackWidth - len(spaces) - spriteWidth - 6 // 6 for start marker
 		if remainingSpace > 0 {
 			trackLine += strings.Repeat(" ", remainingSpace)
 		}
