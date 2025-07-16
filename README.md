@@ -72,7 +72,7 @@ go build -o goderby cmd/main.go
 
 - Built with Go 1.24.5+
 - Uses Bubble Tea for TUI framework
-- Lip Gloss for styling and colors (custom purple/pink theme)
+- Lip Gloss for styling
 - JSON for data storage and saves
 - Modular architecture with separate models, UI, and game logic
 - Clean MVC pattern with message-based communication
