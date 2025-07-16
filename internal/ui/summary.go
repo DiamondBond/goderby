@@ -5,9 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"goderby/internal/models"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"goderby/internal/models"
 )
 
 type SummaryModel struct {
@@ -186,7 +187,7 @@ func (m SummaryModel) renderSeasonSummaryView() string {
 	b.WriteString("\n\n")
 
 	// Social sharing options
-	b.WriteString(RenderHeader("📱 Social Sharing"))
+	b.WriteString(RenderHeader("📤 Sharing"))
 	b.WriteString("\n")
 	b.WriteString(RenderButton("Create Shareable Profile Card (p)", true))
 	b.WriteString("\n")
