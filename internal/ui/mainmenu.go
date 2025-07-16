@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"goderby/internal/models"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"goderby/internal/models"
 )
 
 type MainMenuModel struct {
