@@ -39,7 +39,7 @@ func (m InfoModel) View() string {
 	var b strings.Builder
 
 	// Title
-	b.WriteString(RenderTitle("Go Derby " + m.gameVersion))
+	b.WriteString(RenderTitle("Derby Go! " + m.gameVersion))
 	b.WriteString("\n\n")
 
 	// Game description
@@ -94,7 +94,7 @@ func (m InfoModel) View() string {
 	// Credits
 	b.WriteString(RenderHeader("Credits"))
 	b.WriteString("\n")
-	credits := "Made by Diamond\n🎮 Enjoy racing to victory in Go Derby! 🏆"
+	credits := "Made by Diamond\n🎮 Enjoy racing to victory in Derby Go!! 🏆"
 	b.WriteString(cardStyle.Render(credits))
 	b.WriteString("\n\n")
 
