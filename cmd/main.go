@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"goderby/internal/data"
 	"goderby/internal/models"
@@ -55,6 +56,9 @@ func NewAppModel() *AppModel {
 func (m *AppModel) Init() tea.Cmd {
 	return tea.Batch(
 		func() tea.Msg { return InitDataMsg{} },
+		tea.Tick(time.Second*5, func(t time.Time) tea.Msg {
+			return PassiveIncomeUpdateMsg{}
+		}),
 	)
 }
 
@@ -70,6 +74,9 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case InitDataMsg:
 		return m.initializeData()
+
+	case PassiveIncomeUpdateMsg:
+		return m.updatePassiveIncome()
 
 	case ui.NavigationMsg:
 		return m.handleNavigation(msg)
@@ -277,7 +284,24 @@ func (m *AppModel) handleQuit() (*AppModel, tea.Cmd) {
 	return m, tea.Quit
 }
 
+func (m *AppModel) updatePassiveIncome() (*AppModel, tea.Cmd) {
+	// Update passive income from retired horses
+	m.gameState.UpdatePassiveGains()
+
+	// Save the updated game state
+	if err := m.dataLoader.SaveGameState(m.gameState); err != nil {
+		log.Printf("Failed to save game state after passive income update: %v", err)
+	}
+
+	// Schedule next passive income update in 5 minutes
+	return m, tea.Tick(time.Second*300, func(t time.Time) tea.Msg {
+		return PassiveIncomeUpdateMsg{}
+	})
+}
+
 type InitDataMsg struct{}
+
+type PassiveIncomeUpdateMsg struct{}
 
 func main() {
 	app := NewAppModel()

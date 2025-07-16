@@ -21,6 +21,12 @@ type SummaryMode int
 const (
 	ViewingSeason SummaryMode = iota
 	AdvancingSeason
+	RetirementCeremony
+	RetirementHomes
+	RetiredHorsesGallery
+	ShareableProfile
+	ShareableSeasonSummary
+	ShareableRetirementCard
 )
 
 func NewSummaryModel(gameState *models.GameState) SummaryModel {
@@ -44,8 +50,13 @@ func (m SummaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return NavigationMsg{State: MainMenuView}
 			}
 		case "esc":
-			return m, func() tea.Msg {
-				return NavigationMsg{State: MainMenuView}
+			if m.mode == ViewingSeason {
+				return m, func() tea.Msg {
+					return NavigationMsg{State: MainMenuView}
+				}
+			} else {
+				m.mode = ViewingSeason
+				return m, nil
 			}
 		case "enter", " ":
 			if m.canAdvance && m.mode == ViewingSeason {
@@ -54,6 +65,37 @@ func (m SummaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "n":
 			if m.canAdvance {
 				return m.advanceSeason()
+			}
+		case "r":
+			if m.gameState.PlayerHorse != nil && m.gameState.PlayerHorse.Age >= 8 {
+				m.mode = RetirementCeremony
+				return m, nil
+			}
+		case "g":
+			if len(m.gameState.RetiredHorses) > 0 {
+				m.mode = RetiredHorsesGallery
+				return m, nil
+			}
+		case "h":
+			if m.mode == RetirementCeremony {
+				m.mode = RetirementHomes
+				return m, nil
+			}
+		case "s":
+			if m.gameState.PlayerHorse != nil {
+				if m.mode == ViewingSeason {
+					m.mode = ShareableSeasonSummary
+				} else if m.mode == RetirementCeremony {
+					m.mode = ShareableRetirementCard
+				} else {
+					m.mode = ShareableProfile
+				}
+				return m, nil
+			}
+		case "p":
+			if m.gameState.PlayerHorse != nil {
+				m.mode = ShareableProfile
+				return m, nil
 			}
 		}
 	}
@@ -76,6 +118,18 @@ func (m SummaryModel) View() string {
 	switch m.mode {
 	case AdvancingSeason:
 		return m.renderSeasonAdvanceView()
+	case RetirementCeremony:
+		return m.renderRetirementCeremonyView()
+	case RetirementHomes:
+		return m.renderRetirementHomesView()
+	case RetiredHorsesGallery:
+		return m.renderRetiredHorsesGalleryView()
+	case ShareableProfile:
+		return m.renderShareableProfileView()
+	case ShareableSeasonSummary:
+		return m.renderShareableSeasonSummaryView()
+	case ShareableRetirementCard:
+		return m.renderShareableRetirementCardView()
 	default:
 		return m.renderSeasonSummaryView()
 	}
@@ -124,21 +178,78 @@ func (m SummaryModel) renderSeasonSummaryView() string {
 	b.WriteString(cardStyle.Render(trainingSum))
 	b.WriteString("\n\n")
 
-	// Next season
+	// Lifetime Career Stats
+	b.WriteString(RenderHeader("Lifetime Career Stats"))
+	b.WriteString("\n")
+	lifetimeStats := m.renderLifetimeStats(horse)
+	b.WriteString(cardStyle.Render(lifetimeStats))
+	b.WriteString("\n\n")
+
+	// Social sharing options
+	b.WriteString(RenderHeader("📱 Social Sharing"))
+	b.WriteString("\n")
+	b.WriteString(RenderButton("Create Shareable Profile Card (p)", false))
+	b.WriteString("  ")
+	b.WriteString(RenderButton("Create Season Summary Card (s)", false))
+	b.WriteString("\n\n")
+
+	// Retired horses gallery link
+	if len(m.gameState.RetiredHorses) > 0 {
+		b.WriteString(RenderButton(fmt.Sprintf("View Retired Horses Gallery (%d horses) (g)", len(m.gameState.RetiredHorses)), false))
+		b.WriteString("\n\n")
+	}
+
+	// Next season or retirement
 	if m.canAdvance {
-		if horse.Age >= 8 {
-			b.WriteString(RenderWarning("Your horse is getting old. Consider retirement after this season."))
+		if horse.Age >= 10 {
+			b.WriteString(RenderWarning("Your horse has reached retirement age (10+ years). Time to retire!"))
+			b.WriteString("\n\n")
+			b.WriteString(RenderButton("Begin Retirement Ceremony (r)", true))
+			b.WriteString("\n\n")
+		} else if horse.Age >= 8 {
+			b.WriteString(RenderWarning("Your horse is getting old. Consider retirement or continue for one more season."))
+			b.WriteString("\n\n")
+			b.WriteString(RenderButton("Advance to Next Season (Enter/n)", true))
+			b.WriteString("  ")
+			b.WriteString(RenderButton("Retire Horse (r)", false))
+			b.WriteString("\n\n")
 		} else {
 			b.WriteString(RenderSuccess("Ready to advance to next season!"))
+			b.WriteString("\n\n")
+			b.WriteString(RenderButton("Advance to Next Season (Enter/n)", true))
+			b.WriteString("\n\n")
 		}
-		b.WriteString("\n\n")
-		b.WriteString(RenderButton("Advance to Next Season (Enter/n)", true))
-		b.WriteString("\n\n")
-		b.WriteString(RenderHelp("Enter/n to advance season, ESC/q to go back"))
+
+		var helpText string
+		if horse.Age >= 8 {
+			helpText = "Enter/n to advance season, r to retire"
+		} else {
+			helpText = "Enter/n to advance season"
+		}
+		if len(m.gameState.RetiredHorses) > 0 {
+			helpText += ", g for gallery"
+		}
+		helpText += ", p/s for shareable cards, ESC/q to go back"
+		b.WriteString(RenderHelp(helpText))
 	} else {
 		b.WriteString(RenderInfo(fmt.Sprintf("Season in progress - Week %d/%d", season.CurrentWeek, season.MaxWeeks)))
 		b.WriteString("\n\n")
-		b.WriteString(RenderHelp("ESC/q to go back"))
+
+		var helpText string
+		if horse.Age >= 8 {
+			helpText = "r to retire"
+		}
+		if len(m.gameState.RetiredHorses) > 0 {
+			if helpText != "" {
+				helpText += ", "
+			}
+			helpText += "g for gallery"
+		}
+		if helpText != "" {
+			helpText += ", "
+		}
+		helpText += "p/s for shareable cards, ESC/q to go back"
+		b.WriteString(RenderHelp(helpText))
 	}
 
 	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
@@ -370,4 +481,299 @@ func (m SummaryModel) advanceSeason() (SummaryModel, tea.Cmd) {
 			return NavigationMsg{State: MainMenuView}
 		}),
 	)
+}
+
+// renderLifetimeStats renders lifetime career statistics for the horse
+func (m SummaryModel) renderLifetimeStats(horse *models.Horse) string {
+	var stats strings.Builder
+
+	stats.WriteString("🏆 Career Overview:\n\n")
+
+	// Basic career stats
+	winRate := 0.0
+	if horse.Races > 0 {
+		winRate = float64(horse.Wins) / float64(horse.Races) * 100
+	}
+
+	stats.WriteString(fmt.Sprintf("Total Races: %d\n", horse.Races))
+	stats.WriteString(fmt.Sprintf("Total Wins: %d (%.1f%%)\n", horse.Wins, winRate))
+	stats.WriteString(fmt.Sprintf("Career Earnings: $%d\n", horse.Money))
+	stats.WriteString(fmt.Sprintf("Fan Support: %d\n", horse.FanSupport))
+	stats.WriteString(fmt.Sprintf("Seasons Competed: %d\n", m.gameState.Season.Number))
+	stats.WriteString(fmt.Sprintf("Current Age: %d years\n", horse.Age))
+	stats.WriteString(fmt.Sprintf("Peak Rating: %d\n", horse.GetOverallRating()))
+
+	// Career milestones
+	stats.WriteString("\n🌟 Career Milestones:\n")
+	if horse.Wins >= 10 {
+		stats.WriteString("✓ 10+ Race Wins\n")
+	} else if horse.Wins >= 5 {
+		stats.WriteString("✓ 5+ Race Wins\n")
+	} else if horse.Wins >= 1 {
+		stats.WriteString("✓ First Race Win\n")
+	}
+
+	if horse.Money >= 100000 {
+		stats.WriteString("✓ $100,000+ Earnings\n")
+	} else if horse.Money >= 50000 {
+		stats.WriteString("✓ $50,000+ Earnings\n")
+	}
+
+	if horse.FanSupport >= 5000 {
+		stats.WriteString("✓ 5,000+ Fans\n")
+	} else if horse.FanSupport >= 1000 {
+		stats.WriteString("✓ 1,000+ Fans\n")
+	}
+
+	if horse.GetOverallRating() >= 200 {
+		stats.WriteString("✓ Elite Performance (200+ rating)\n")
+	} else if horse.GetOverallRating() >= 150 {
+		stats.WriteString("✓ Expert Performance (150+ rating)\n")
+	}
+
+	return stats.String()
+}
+
+// renderRetirementCeremonyView displays the retirement ceremony with career highlights
+func (m SummaryModel) renderRetirementCeremonyView() string {
+	var b strings.Builder
+
+	horse := m.gameState.PlayerHorse
+
+	b.WriteString(RenderTitle(fmt.Sprintf("🎉 Retirement Ceremony - %s", horse.Name)))
+	b.WriteString("\n\n")
+
+	b.WriteString(RenderSuccess("Congratulations on an amazing career!"))
+	b.WriteString("\n\n")
+
+	// Career highlights
+	highlights := m.gameState.CalculateCareerHighlights(horse)
+	awards := m.gameState.CalculateAwards(horse, highlights)
+
+	b.WriteString(RenderHeader("🏆 Career Highlights"))
+	b.WriteString("\n")
+
+	var highlightText strings.Builder
+	highlightText.WriteString(fmt.Sprintf("Career Span: %d seasons (%d years old)\n", highlights.CareerLength, horse.Age))
+	highlightText.WriteString(fmt.Sprintf("Total Races: %d\n", highlights.TotalRaces))
+	highlightText.WriteString(fmt.Sprintf("Total Wins: %d (%.1f%%)\n", highlights.TotalWins, highlights.WinPercentage))
+	highlightText.WriteString(fmt.Sprintf("Career Earnings: $%d\n", highlights.TotalPrizeMoney))
+	highlightText.WriteString(fmt.Sprintf("Fan Support: %d\n", highlights.TotalFanSupport))
+	highlightText.WriteString(fmt.Sprintf("Peak Rating: %d\n", highlights.HighestRating))
+	highlightText.WriteString(fmt.Sprintf("Most Prestigious Race: %s\n", highlights.MostPrestigiousRace))
+
+	b.WriteString(cardStyle.Render(highlightText.String()))
+	b.WriteString("\n\n")
+
+	// Awards earned
+	if len(awards) > 0 {
+		b.WriteString(RenderHeader("🏅 Awards Earned"))
+		b.WriteString("\n")
+
+		var awardText strings.Builder
+		for _, award := range awards {
+			awardText.WriteString(fmt.Sprintf("%s %s - %s\n", award.Icon, award.Name, award.Description))
+		}
+
+		b.WriteString(cardStyle.Render(awardText.String()))
+		b.WriteString("\n\n")
+	}
+
+	// Retirement home selection
+	b.WriteString(RenderHeader("🏠 Choose Retirement Home"))
+	b.WriteString("\n")
+	b.WriteString(RenderInfo("Select where your horse will spend their retirement years."))
+	b.WriteString("\n\n")
+
+	b.WriteString(RenderButton("Browse Retirement Homes (h)", true))
+	b.WriteString("  ")
+	b.WriteString(RenderButton("Create Retirement Card (s)", false))
+	b.WriteString("\n\n")
+
+	b.WriteString(RenderHelp("h to browse retirement homes, s for shareable card, ESC to go back"))
+
+	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
+}
+
+// renderRetirementHomesView displays available retirement homes
+func (m SummaryModel) renderRetirementHomesView() string {
+	var b strings.Builder
+
+	b.WriteString(RenderTitle("🏠 Retirement Homes"))
+	b.WriteString("\n\n")
+
+	homes := m.gameState.GetAvailableRetirementHomes()
+
+	if len(homes) == 0 {
+		b.WriteString(RenderError("No retirement homes available. You need to earn more money to unlock better homes."))
+		b.WriteString("\n\n")
+		b.WriteString(RenderHelp("ESC to go back"))
+		return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
+	}
+
+	b.WriteString(RenderHeader("Available Retirement Homes"))
+	b.WriteString("\n")
+
+	for i, home := range homes {
+		var homeInfo strings.Builder
+		homeInfo.WriteString(fmt.Sprintf("🏠 %s\n", home.Name))
+		homeInfo.WriteString(fmt.Sprintf("Description: %s\n", home.Description))
+		homeInfo.WriteString(fmt.Sprintf("Capacity: %d horses\n", home.Capacity))
+		homeInfo.WriteString(fmt.Sprintf("Income Multiplier: %.1fx\n", home.IncomeMultiplier))
+		homeInfo.WriteString(fmt.Sprintf("Fame Multiplier: %.1fx\n", home.FameMultiplier))
+
+		if home.Cost > 0 {
+			if home.IsOwned {
+				homeInfo.WriteString("Status: Owned ✓\n")
+			} else {
+				homeInfo.WriteString(fmt.Sprintf("Cost: $%d\n", home.Cost))
+				if m.gameState.PlayerHorse.Money >= home.Cost {
+					homeInfo.WriteString("Status: Available for purchase\n")
+				} else {
+					homeInfo.WriteString("Status: Cannot afford\n")
+				}
+			}
+		} else {
+			homeInfo.WriteString("Status: Free\n")
+		}
+
+		b.WriteString(cardStyle.Render(homeInfo.String()))
+		if i < len(homes)-1 {
+			b.WriteString("\n")
+		}
+	}
+
+	b.WriteString("\n\n")
+	b.WriteString(RenderHelp("ESC to go back to retirement ceremony"))
+
+	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
+}
+
+// renderRetiredHorsesGalleryView displays all retired horses
+func (m SummaryModel) renderRetiredHorsesGalleryView() string {
+	var b strings.Builder
+
+	b.WriteString(RenderTitle("🖼️ Retired Horses Gallery"))
+	b.WriteString("\n\n")
+
+	if len(m.gameState.RetiredHorses) == 0 {
+		b.WriteString(RenderInfo("No retired horses yet. Continue playing to build your legacy!"))
+		b.WriteString("\n\n")
+		b.WriteString(RenderHelp("ESC to go back"))
+		return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
+	}
+
+	for i, retired := range m.gameState.RetiredHorses {
+		var horseCard strings.Builder
+		horseCard.WriteString(fmt.Sprintf("🐎 %s (%s)\n", retired.Horse.Name, retired.Horse.Breed))
+		horseCard.WriteString(fmt.Sprintf("Retired: %s (Age %d)\n", retired.RetiredAt.Format("2006-01-02"), retired.Horse.Age))
+		horseCard.WriteString(fmt.Sprintf("Retirement Home: %s\n", retired.RetirementHome.Name))
+		horseCard.WriteString(fmt.Sprintf("Post-Retirement Role: %s\n", retired.PostRetirementRole.String()))
+		horseCard.WriteString(fmt.Sprintf("Career Record: %d wins in %d races (%.1f%%)\n",
+			retired.CareerHighlights.TotalWins,
+			retired.CareerHighlights.TotalRaces,
+			retired.CareerHighlights.WinPercentage))
+		horseCard.WriteString(fmt.Sprintf("Career Earnings: $%d\n", retired.CareerHighlights.TotalPrizeMoney))
+		horseCard.WriteString(fmt.Sprintf("Passive Income: $%d/month\n", retired.PassiveIncome))
+		horseCard.WriteString(fmt.Sprintf("Awards: %d earned\n", len(retired.Awards)))
+
+		b.WriteString(cardStyle.Render(horseCard.String()))
+		if i < len(m.gameState.RetiredHorses)-1 {
+			b.WriteString("\n")
+		}
+	}
+
+	b.WriteString("\n\n")
+	b.WriteString(RenderHelp("ESC to go back"))
+
+	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
+}
+
+// renderShareableProfileView displays a shareable horse profile card
+func (m SummaryModel) renderShareableProfileView() string {
+	var b strings.Builder
+
+	horse := m.gameState.PlayerHorse
+
+	b.WriteString(RenderTitle("📱 Shareable Horse Profile"))
+	b.WriteString("\n\n")
+
+	b.WriteString(RenderInfo("Screenshot this card to share your horse's profile!"))
+	b.WriteString("\n\n")
+
+	// Generate shareable profile card
+	highlights := m.gameState.CalculateCareerHighlights(horse)
+	awards := m.gameState.CalculateAwards(horse, highlights)
+
+	shareableCard := RenderShareableHorseProfile(horse, highlights, awards)
+	b.WriteString(shareableCard)
+
+	b.WriteString("\n\n")
+	b.WriteString(RenderHelp("ESC to go back"))
+
+	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
+}
+
+// renderShareableSeasonSummaryView displays a shareable season summary card
+func (m SummaryModel) renderShareableSeasonSummaryView() string {
+	var b strings.Builder
+
+	horse := m.gameState.PlayerHorse
+	season := m.gameState.Season
+	gameStats := m.gameState.GameStats
+
+	b.WriteString(RenderTitle("📱 Shareable Season Summary"))
+	b.WriteString("\n\n")
+
+	b.WriteString(RenderInfo("Screenshot this card to share your season performance!"))
+	b.WriteString("\n\n")
+
+	// Generate shareable season summary card
+	shareableCard := RenderShareableSeasonSummary(horse, season, gameStats)
+	b.WriteString(shareableCard)
+
+	b.WriteString("\n\n")
+	b.WriteString(RenderHelp("ESC to go back"))
+
+	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
+}
+
+// renderShareableRetirementCardView displays a shareable retirement card
+func (m SummaryModel) renderShareableRetirementCardView() string {
+	var b strings.Builder
+
+	horse := m.gameState.PlayerHorse
+
+	b.WriteString(RenderTitle("📱 Shareable Retirement Card"))
+	b.WriteString("\n\n")
+
+	b.WriteString(RenderInfo("Screenshot this card to share your horse's retirement ceremony!"))
+	b.WriteString("\n\n")
+
+	// Create a temporary retired horse for the card
+	highlights := m.gameState.CalculateCareerHighlights(horse)
+	awards := m.gameState.CalculateAwards(horse, highlights)
+
+	// Use the basic paddock as default retirement home for preview
+	basicHome := m.gameState.RetirementHomes[0]
+
+	tempRetired := models.RetiredHorse{
+		Horse:              *horse,
+		RetiredAt:          time.Now(),
+		RetirementHome:     basicHome,
+		PostRetirementRole: models.ShowHorse,
+		CareerHighlights:   highlights,
+		Awards:             awards,
+		PassiveIncome:      highlights.TotalPrizeMoney / 100,
+		PassiveFame:        highlights.TotalFanSupport / 50,
+		LastPassiveGain:    time.Now(),
+	}
+
+	shareableCard := RenderShareableRetirementCard(tempRetired)
+	b.WriteString(shareableCard)
+
+	b.WriteString("\n\n")
+	b.WriteString(RenderHelp("ESC to go back"))
+
+	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
 }

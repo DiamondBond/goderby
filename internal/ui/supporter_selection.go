@@ -14,6 +14,8 @@ type SupporterSelectionModel struct {
 	cursor              int
 	availableSupporters []models.Supporter
 	confirmed           bool
+	viewStart           int // For scrolling
+	maxVisible          int // Maximum supporters visible at once
 }
 
 func NewSupporterSelectionModel(gameState *models.GameState) SupporterSelectionModel {
@@ -22,6 +24,8 @@ func NewSupporterSelectionModel(gameState *models.GameState) SupporterSelectionM
 		cursor:              0,
 		availableSupporters: gameState.Supporters,
 		confirmed:           false,
+		viewStart:           0,
+		maxVisible:          3, // Show 3 supporters at a time
 	}
 }
 
@@ -47,10 +51,18 @@ func (m SupporterSelectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "up", "k":
 			if m.cursor > 0 {
 				m.cursor--
+				// Adjust view if cursor goes above visible area
+				if m.cursor < m.viewStart {
+					m.viewStart = m.cursor
+				}
 			}
 		case "down", "j":
 			if m.cursor < len(m.availableSupporters)-1 {
 				m.cursor++
+				// Adjust view if cursor goes below visible area
+				if m.cursor >= m.viewStart+m.maxVisible {
+					m.viewStart = m.cursor - m.maxVisible + 1
+				}
 			}
 		case "enter", " ":
 			if m.confirmed {
@@ -135,8 +147,14 @@ func (m SupporterSelectionModel) View() string {
 		return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
 	}
 
-	// Supporter list
-	for i, supporter := range m.availableSupporters {
+	// Supporter list with scrolling
+	viewEnd := m.viewStart + m.maxVisible
+	if viewEnd > len(m.availableSupporters) {
+		viewEnd = len(m.availableSupporters)
+	}
+
+	for i := m.viewStart; i < viewEnd; i++ {
+		supporter := m.availableSupporters[i]
 		cursor := " "
 		if m.cursor == i {
 			cursor = ">"
@@ -185,7 +203,23 @@ func (m SupporterSelectionModel) View() string {
 		rarityColor := lipgloss.Color(supporter.Rarity.Color())
 		styledContent := style.Foreground(rarityColor).Render(supporterInfo)
 		b.WriteString(styledContent)
-		b.WriteString("\n")
+		if i < viewEnd-1 {
+			b.WriteString("\n")
+		}
+	}
+
+	// Show scroll indicators
+	if len(m.availableSupporters) > m.maxVisible {
+		b.WriteString("\n\n")
+		scrollInfo := fmt.Sprintf("Showing %d-%d of %d supporters",
+			m.viewStart+1, viewEnd, len(m.availableSupporters))
+		if m.viewStart > 0 {
+			scrollInfo += " ↑"
+		}
+		if viewEnd < len(m.availableSupporters) {
+			scrollInfo += " ↓"
+		}
+		b.WriteString(RenderInfo(scrollInfo))
 	}
 
 	// Instructions

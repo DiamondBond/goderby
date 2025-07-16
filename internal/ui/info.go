@@ -92,11 +92,11 @@ func (m InfoModel) View() string {
 	b.WriteString("\n\n")
 
 	// Credits
-	b.WriteString(RenderHeader("Credits"))
-	b.WriteString("\n")
-	credits := "Made by Diamond\n🎮 Enjoy racing to victory in Go! Derby! 🏆"
-	b.WriteString(cardStyle.Render(credits))
-	b.WriteString("\n\n")
+	// b.WriteString(RenderHeader("Credits"))
+	// b.WriteString("\n")
+	// credits := "Made by Diamond\n🎮 Enjoy racing to victory in Go! Derby! 🏆"
+	// b.WriteString(cardStyle.Render(credits))
+	// b.WriteString("\n\n")
 
 	// Help
 	b.WriteString(RenderHelp("Press any key to return to main menu"))

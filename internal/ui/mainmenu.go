@@ -98,6 +98,26 @@ func (m MainMenuModel) View() string {
 		b.WriteString("\n\n")
 	}
 
+	// Retired horses passive income
+	if len(m.gameState.RetiredHorses) > 0 {
+		b.WriteString(RenderHeader("Retired Horses"))
+		b.WriteString("\n")
+
+		totalPassiveIncome := 0
+		totalPassiveFame := 0
+		for _, retired := range m.gameState.RetiredHorses {
+			totalPassiveIncome += retired.PassiveIncome
+			totalPassiveFame += retired.PassiveFame
+		}
+
+		retiredInfo := fmt.Sprintf("🏠 %d horses retired\n", len(m.gameState.RetiredHorses))
+		retiredInfo += fmt.Sprintf("💰 $%d/month passive income\n", totalPassiveIncome)
+		retiredInfo += fmt.Sprintf("⭐ %d/month passive fame\n", totalPassiveFame)
+
+		b.WriteString(cardStyle.Render(retiredInfo))
+		b.WriteString("\n\n")
+	}
+
 	// Menu
 	b.WriteString(RenderHeader("Main Menu"))
 	b.WriteString("\n")

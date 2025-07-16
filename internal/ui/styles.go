@@ -102,6 +102,50 @@ var (
 				Padding(0, 2).
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(lipgloss.Color("#888888"))
+
+	// Social sharing card styles
+	shareableCardStyle = lipgloss.NewStyle().
+				Border(lipgloss.DoubleBorder()).
+				BorderForeground(primaryColor).
+				Padding(2, 3).
+				Margin(1, 2).
+				Foreground(textColor).
+				Background(lipgloss.Color("#1a1a2e")).
+				Width(80)
+
+	shareableHeaderStyle = lipgloss.NewStyle().
+				Foreground(primaryColor).
+				Bold(true).
+				Align(lipgloss.Center).
+				Width(74)
+
+	shareableSubHeaderStyle = lipgloss.NewStyle().
+				Foreground(accentColor).
+				Bold(true).
+				Align(lipgloss.Center).
+				Width(74)
+
+	shareableStatStyle = lipgloss.NewStyle().
+				Foreground(successColor).
+				Bold(true)
+
+	shareableLabelStyle = lipgloss.NewStyle().
+				Foreground(subtleColor).
+				Width(20)
+
+	shareableValueStyle = lipgloss.NewStyle().
+				Foreground(textColor).
+				Bold(true)
+
+	shareableAwardStyle = lipgloss.NewStyle().
+				Foreground(warningColor).
+				Bold(true)
+
+	shareableFooterStyle = lipgloss.NewStyle().
+				Foreground(subtleColor).
+				Align(lipgloss.Center).
+				Width(74).
+				Italic(true)
 )
 
 func RenderProgressBar(current, max int, width int, style lipgloss.Style) string {
