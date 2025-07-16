@@ -81,11 +81,13 @@ func (m SupportersModel) View() string {
 	tabStyle := lipgloss.NewStyle().
 		Padding(0, 2).
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#888888"))
+		BorderForeground(lipgloss.Color("#DDA0DD")).
+		Foreground(lipgloss.Color("#FFFFFF"))
 
 	activeTabStyle := tabStyle.Copy().
-		BorderForeground(lipgloss.Color("#00AAFF")).
-		Background(lipgloss.Color("#1a1a2e"))
+		BorderForeground(lipgloss.Color("#7ED321")).
+		Background(lipgloss.Color("#7ED321")).
+		Foreground(lipgloss.Color("#FFFFFF"))
 
 	var ownedTab, allTab string
 	if m.selectedPage == 0 {
@@ -119,12 +121,15 @@ func (m SupportersModel) View() string {
 
 	// Display supporters
 	for i, supporter := range displaySupporter {
-		style := lipgloss.NewStyle().Padding(1, 2).Margin(0, 0, 1, 0)
+		style := lipgloss.NewStyle().
+			Padding(1, 2).
+			Margin(0, 0, 1, 0).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#DDA0DD")).
+			Foreground(lipgloss.Color("#FFFFFF"))
 
 		if i == m.cursor {
-			style = style.Background(lipgloss.Color("#1a1a2e")).
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("#00AAFF"))
+			style = style.BorderForeground(lipgloss.Color("#7ED321"))
 		}
 
 		// Supporter info
