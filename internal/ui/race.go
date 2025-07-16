@@ -13,14 +13,15 @@ import (
 )
 
 type RaceModel struct {
-	gameState     *models.GameState
-	races         []models.Race
-	selectedRace  int
-	selectedStrat models.RaceStrategy
-	mode          RaceMode
-	result        *models.RaceResult
-	liveProgress  []models.RaceProgressUpdate
-	currentTurn   int
+	gameState         *models.GameState
+	races             []models.Race
+	selectedRace      int
+	selectedStrat     models.RaceStrategy
+	mode              RaceMode
+	result            *models.RaceResult
+	liveProgress      []models.RaceProgressUpdate
+	currentTurn       int
+	acquiredSupporter *models.Supporter
 }
 
 type RaceMode int
@@ -428,6 +429,14 @@ func (m RaceModel) renderResultView() string {
 	// Rewards
 	rewardsInfo := fmt.Sprintf("Prize Money: $%d\n", m.result.PrizeMoney)
 	rewardsInfo += fmt.Sprintf("Fans Gained: %d", m.result.FansGained)
+
+	// Show acquired supporter if any
+	if m.acquiredSupporter != nil {
+		rewardsInfo += fmt.Sprintf("\n\n🎉 New Supporter Acquired!\n")
+		rewardsInfo += fmt.Sprintf("%s %s\n", m.acquiredSupporter.Rarity.String(), m.acquiredSupporter.Name)
+		rewardsInfo += fmt.Sprintf("📝 %s", m.acquiredSupporter.Description)
+	}
+
 	b.WriteString(cardStyle.Render(rewardsInfo))
 	b.WriteString("\n\n")
 
@@ -463,6 +472,9 @@ func (m RaceModel) renderResultView() string {
 }
 
 func (m RaceModel) startRace() (RaceModel, tea.Cmd) {
+	// Reset acquired supporter for new race
+	m.acquiredSupporter = nil
+
 	race := m.races[m.selectedRace]
 
 	// Add player horse to race
@@ -543,10 +555,72 @@ func (m RaceModel) completeRace() (RaceModel, tea.Cmd) {
 		if !found {
 			m.gameState.AllCompletedRaces = append(m.gameState.AllCompletedRaces, raceID)
 		}
+
+		// Try to acquire supporter based on race performance
+		m.TryAcquireSupporter(m.races[m.selectedRace], m.result.PlayerRank)
 	}
 
 	return m, func() tea.Msg {
 		return NavigationMsg{State: MainMenuView}
+	}
+}
+
+func (m *RaceModel) TryAcquireSupporter(race models.Race, playerRank int) {
+	// Base acquisition chance based on race grade
+	var baseChance float64
+	var targetRarity models.Rarity
+
+	switch race.Grade {
+	case models.GradeG1:
+		// Ultra Rare supporters for top tier races
+		baseChance = 0.25
+		targetRarity = models.UltraRare
+	case models.Grade1:
+		// Super Rare supporters for Grade 1 races
+		baseChance = 0.30
+		targetRarity = models.SuperRare
+	case models.Grade2:
+		// Rare supporters for Grade 2 races
+		baseChance = 0.40
+		targetRarity = models.Rare
+	case models.Grade3:
+		// Common supporters for Grade 3 races
+		baseChance = 0.50
+		targetRarity = models.Common
+	default: // MaidenRace
+		// Common supporters for Maiden races
+		baseChance = 0.30
+		targetRarity = models.Common
+	}
+
+	// Position multiplier
+	var positionMultiplier float64
+	switch playerRank {
+	case 1:
+		positionMultiplier = 1.0
+	case 2:
+		positionMultiplier = 0.75
+	case 3:
+		positionMultiplier = 0.50
+	default:
+		positionMultiplier = 0.25
+	}
+
+	finalChance := baseChance * positionMultiplier
+
+	// Roll for acquisition
+	if rand.Float64() < finalChance {
+		// Find unowned supporter of target rarity
+		for i := range m.gameState.Supporters {
+			if m.gameState.Supporters[i].Rarity == targetRarity && !m.gameState.Supporters[i].IsOwned {
+				// Mark as owned
+				m.gameState.Supporters[i].IsOwned = true
+
+				// Store acquired supporter info for UI display
+				m.acquiredSupporter = &m.gameState.Supporters[i]
+				break
+			}
+		}
 	}
 }
 
