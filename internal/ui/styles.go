@@ -110,22 +110,22 @@ var (
 				Padding(2, 3).
 				Margin(1, 2).
 				Foreground(textColor).
-				Background(lipgloss.Color("#1a1a2e")).
-				Width(80)
+		// Background(lipgloss.Color("#1a1a2e")).
+		Width(80)
 
 	shareableHeaderStyle = lipgloss.NewStyle().
 				Foreground(primaryColor).
-				Background(lipgloss.Color("#1a1a2e")).
-				Bold(true).
-				Align(lipgloss.Center).
-				Width(74)
+		// Background(lipgloss.Color("#1a1a2e")).
+		Bold(true).
+		Align(lipgloss.Center).
+		Width(74)
 
 	shareableSubHeaderStyle = lipgloss.NewStyle().
 				Foreground(accentColor).
-				Background(lipgloss.Color("#1a1a2e")).
-				Bold(true).
-				Align(lipgloss.Center).
-				Width(74)
+		// Background(lipgloss.Color("#1a1a2e")).
+		Bold(true).
+		Align(lipgloss.Center).
+		Width(74)
 
 	shareableStatStyle = lipgloss.NewStyle().
 				Foreground(successColor).
