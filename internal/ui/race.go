@@ -291,7 +291,7 @@ func (m RaceModel) renderConfirmView() string {
 	confirmInfo += fmt.Sprintf("Horse: %s (Rating: %d)\n", horse.Name, horse.GetOverallRating())
 	confirmInfo += fmt.Sprintf("Formation: %s | Pace: %s\n\n",
 		m.selectedStrat.Formation.String(), m.selectedStrat.Pace.String())
-	confirmInfo += fmt.Sprintf("Current Status:\n")
+	confirmInfo += "Current Status:\n"
 	confirmInfo += fmt.Sprintf("Fatigue: %d/100 | Morale: %d/100", horse.Fatigue, horse.Morale)
 
 	b.WriteString(cardStyle.Render(confirmInfo))

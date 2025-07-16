@@ -102,25 +102,26 @@ func (rs *RaceSimulator) Simulate() models.RaceResult {
 		}
 
 		// Generate commentary
-		if turn == 1 {
+		switch turn {
+		case 1:
 			turnUpdate.Commentary = "🏁 And they're off!"
-		} else if turn == numTurns/4 {
+		case numTurns / 4:
 			leader := rs.getLeader(positions)
 			turnUpdate.Commentary = fmt.Sprintf("🎯 At the first quarter: %s takes the lead!", rs.horses[leader].Name)
-		} else if turn == numTurns/2 {
+		case numTurns / 2:
 			leader := rs.getLeader(positions)
 			turnUpdate.Commentary = fmt.Sprintf("⚡ Halfway point: %s is still in front!", rs.horses[leader].Name)
-		} else if turn == (numTurns*3)/4 {
+		case (numTurns * 3) / 4:
 			leader := rs.getLeader(positions)
 			turnUpdate.Commentary = fmt.Sprintf("🔥 Final quarter: %s leading into the home stretch!", rs.horses[leader].Name)
-		} else if turn == numTurns {
+		case numTurns:
 			leader := rs.getLeader(positions)
 			turnUpdate.Commentary = fmt.Sprintf("🏆 %s crosses the finish line first!", rs.horses[leader].Name)
 		}
 
 		// Random events
 		if rand.Float64() < 0.1 { // 10% chance of event
-			event := rs.generateRandomEvent(turn, numTurns)
+			event := rs.generateRandomEvent()
 			if event != "" {
 				turnUpdate.Events = append(turnUpdate.Events, event)
 			}
@@ -274,7 +275,7 @@ func (rs *RaceSimulator) getLeader(positions map[string]int) string {
 	return ""
 }
 
-func (rs *RaceSimulator) generateRandomEvent(turn, totalTurns int) string {
+func (rs *RaceSimulator) generateRandomEvent() string {
 	events := []string{
 		"A gust of wind affects the field!",
 		"The crowd cheers loudly!",
