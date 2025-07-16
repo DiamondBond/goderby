@@ -900,9 +900,6 @@ func (m *RaceModel) useWhip() (RaceModel, tea.Cmd) {
 	m.whipUses++
 	m.lastWhipTurn = m.currentTurn
 
-	// Play whip sound effect
-	fmt.Print("\a")
-
 	// Check for disobedience based on whip uses
 	// More whips = higher chance of disobedience
 	disobedienceChance := float64(m.whipUses) * 0.15 // 15% per whip use
