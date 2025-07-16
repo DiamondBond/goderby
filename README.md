@@ -23,16 +23,19 @@
 ## Game Mechanics
 
 ### Training Types
+
 - **Stamina**: Improves endurance for longer races
 - **Speed**: Increases base racing speed
 - **Technique**: Enhances consistency and skill
 - **Mental**: Improves performance under pressure
 
 ### Race Strategy
+
 - **Formation**: Lead, Draft, or Mount tactics
 - **Pace**: Fast, Even, or Conservative racing approach
 
 ### Progression
+
 - Horses age each season (2-10 years old)
 - Stats can be improved through training up to maximums
 - Fatigue and morale affect training and racing performance

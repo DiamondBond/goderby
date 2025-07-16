@@ -94,7 +94,7 @@ func (m InfoModel) View() string {
 	// Credits
 	b.WriteString(RenderHeader("Credits"))
 	b.WriteString("\n")
-	credits := "Made by Diamond & Claude Sonnet 4\n🎮 Enjoy racing to victory in Go Derby! 🏆"
+	credits := "Made by Diamond\n🎮 Enjoy racing to victory in Go Derby! 🏆"
 	b.WriteString(cardStyle.Render(credits))
 	b.WriteString("\n\n")
 

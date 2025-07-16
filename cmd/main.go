@@ -12,7 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const GameVersion = "v1.1"
+const GameVersion = "v1.2"
 
 type AppModel struct {
 	currentView ui.ViewState
